@@ -1,0 +1,18 @@
+{
+   "action": {
+      "default_popup": "popup.html"
+   },
+   "content_scripts": [ {
+      "js": [ "content.js" ],
+      "matches": [ "https://chatgpt.com/*" ]
+   } ],
+   "description": "Free and unlimited prompt chains for ChatGPT. Save, edit, and automatically queue prompts with custom separators.",
+   "icons": {
+      "128": "Logo.png"
+   },
+   "manifest_version": 3,
+   "name": "ChatGPT Chain Prompts - Free Automated Message Queue",
+   "permissions": [ "storage" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1.1"
+}
