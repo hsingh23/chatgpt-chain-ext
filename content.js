@@ -4,7 +4,8 @@ let config = {
     imageThrottleCount: 5,
     imageThrottleDelayMs: 120000,
     enableSleepIndicator: true,
-    enableFloatingProgress: true // This now enables the control panel
+    enableFloatingProgress: true,
+    controlPanelPosition: null // Will store {x, y} position
 };
 
 // --- State Variables ---
@@ -27,6 +28,7 @@ let progressStatusElement = null;
 let pendingCommandsListElement = null;
 let pauseResumeButton = null;
 let stopButton = null;
+let navContainer = null;
 
 // --- Default settings (used if storage is not available or first run) ---
 const C_DEFAULT_SETTINGS = {
@@ -35,7 +37,8 @@ const C_DEFAULT_SETTINGS = {
     imageThrottleCount: 5,
     imageThrottleDelayMs: 120000,
     enableSleepIndicator: true,
-    enableFloatingProgress: true
+    enableFloatingProgress: true,
+    controlPanelPosition: null
 };
 
 // --- Load Configuration from Storage ---
@@ -154,31 +157,102 @@ function createControlPanel() {
     if (!config.enableFloatingProgress) return;
     if (document.getElementById('ext-control-panel')) return;
 
+    // Calculate initial position - higher on smaller screens to avoid text area
+    const screenHeight = window.innerHeight;
+    const screenWidth = window.innerWidth;
+    let initialTop, initialLeft;
+    
+    if (config.controlPanelPosition) {
+        // Use saved position
+        initialTop = config.controlPanelPosition.y;
+        initialLeft = config.controlPanelPosition.x;
+    } else {
+        // Default position - higher on smaller screens
+        if (screenHeight < 700) {
+            initialTop = 20; // Higher on small screens
+        } else {
+            initialTop = screenHeight - 200; // Lower on larger screens
+        }
+        initialLeft = screenWidth - 300;
+    }
+
     controlPanelElement = document.createElement('div');
     controlPanelElement.id = 'ext-control-panel';
     controlPanelElement.style.cssText = `
-        position: fixed; bottom: 20px; right: 20px;
-        background-color: rgba(20, 20, 80, 0.9); color: white; padding: 15px;
+        position: fixed; top: ${initialTop}px; left: ${initialLeft}px;
+        background-color: rgba(20, 20, 80, 0.85); color: white; padding: 15px;
         border-radius: 10px; z-index: 20000; font-family: Arial, sans-serif;
         font-size: 14px; display: none; width: 280px; box-shadow: 0 0 15px rgba(0,0,0,0.4);
+        cursor: move; user-select: none;
     `;
+
+    // Make the panel draggable
+    let isDragging = false;
+    let startX, startY, startLeft, startTop;
+
+    controlPanelElement.addEventListener('mousedown', (e) => {
+        // Only start dragging if clicking on the panel itself, not buttons
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'UL' || e.target.tagName === 'LI') {
+            return;
+        }
+        
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = parseInt(controlPanelElement.style.left);
+        startTop = parseInt(controlPanelElement.style.top);
+        
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const newLeft = startLeft + e.clientX - startX;
+        const newTop = startTop + e.clientY - startY;
+        
+        // Keep panel within viewport bounds
+        const maxLeft = window.innerWidth - controlPanelElement.offsetWidth;
+        const maxTop = window.innerHeight - controlPanelElement.offsetHeight;
+        
+        const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+        const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
+        
+        controlPanelElement.style.left = constrainedLeft + 'px';
+        controlPanelElement.style.top = constrainedTop + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            // Save position to config
+            const newPosition = {
+                x: parseInt(controlPanelElement.style.left),
+                y: parseInt(controlPanelElement.style.top)
+            };
+            config.controlPanelPosition = newPosition;
+            
+            // Save to storage
+            chrome.storage.sync.set({ 
+                extensionSettings: { ...config } 
+            });
+            
+            isDragging = false;
+        }
+    });
 
     progressStatusElement = document.createElement('div');
     progressStatusElement.id = 'ext-progress-status';
     progressStatusElement.style.marginBottom = '10px';
-    progressStatusElement.style.fontWeight = 'bold';
-
-    pendingCommandsListElement = document.createElement('ul');
+    progressStatusElement.style.fontWeight = 'bold';    pendingCommandsListElement = document.createElement('ul');
     pendingCommandsListElement.id = 'ext-pending-commands';
     pendingCommandsListElement.style.cssText = `
-        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 100px; 
+        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 150px; 
         overflow-y: auto; font-size: 12px; background-color: rgba(0,0,0,0.2); 
         border-radius: 5px; padding: 5px;
-    `;
-
-    const buttonContainer = document.createElement('div');
+    `;const buttonContainer = document.createElement('div');
     buttonContainer.style.display = 'flex';
     buttonContainer.style.gap = '10px';
+    buttonContainer.style.marginBottom = '10px';
 
     pauseResumeButton = document.createElement('button');
     pauseResumeButton.id = 'ext-pause-resume-button';
@@ -193,12 +267,39 @@ function createControlPanel() {
     stopButton.id = 'ext-stop-button';
     stopButton.textContent = 'Stop';
     stopButton.style.cssText = `padding: 8px 10px; background-color: #dc3545; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1;`;
-    stopButton.onclick = stopSequence;
+    stopButton.onclick = stopSequence;    // Navigation buttons for when paused
+    navContainer = document.createElement('div');
+    navContainer.id = 'ext-nav-container';
+    navContainer.style.cssText = `display: none; gap: 5px; margin-bottom: 10px;`;
+
+    const backButton = document.createElement('button');
+    backButton.id = 'ext-back-button';
+    backButton.textContent = '← Back';
+    backButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
+    backButton.onclick = () => {
+        if (isPaused && currentCommandIndex > 0) {
+            currentCommandIndex--;
+            updateControlPanel();
+        }
+    };
+
+    const forwardButton = document.createElement('button');
+    forwardButton.id = 'ext-forward-button';
+    forwardButton.textContent = 'Forward →';
+    forwardButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
+    forwardButton.onclick = () => {
+        if (isPaused && currentCommandIndex < totalCommandsInSequence - 1) {
+            currentCommandIndex++;
+            updateControlPanel();
+        }
+    };
+
+    navContainer.appendChild(backButton);
+    navContainer.appendChild(forwardButton);
     
     buttonContainer.appendChild(pauseResumeButton);
-    buttonContainer.appendChild(stopButton);
-
-    controlPanelElement.appendChild(progressStatusElement);
+    buttonContainer.appendChild(stopButton);    controlPanelElement.appendChild(progressStatusElement);
+    controlPanelElement.appendChild(navContainer);
     controlPanelElement.appendChild(pendingCommandsListElement);
     controlPanelElement.appendChild(buttonContainer);
     document.body.appendChild(controlPanelElement);
@@ -208,6 +309,11 @@ function destroyControlPanel() {
     if (controlPanelElement) {
         controlPanelElement.remove();
         controlPanelElement = null;
+        progressStatusElement = null;
+        pendingCommandsListElement = null;
+        pauseResumeButton = null;
+        stopButton = null;
+        navContainer = null;
     }
 }
 
@@ -220,6 +326,20 @@ function updateControlPanel() {
     progressStatusElement.textContent = `Progress: ${currentCommandIndex} / ${totalCommandsInSequence}`;
     if (isPaused) {
         progressStatusElement.textContent += " (Paused)";
+    }    // Show/hide navigation buttons based on pause state
+    const backButton = document.getElementById('ext-back-button');
+    const forwardButton = document.getElementById('ext-forward-button');
+    
+    if (navContainer) {
+        navContainer.style.display = isPaused ? 'flex' : 'none';
+        
+        if (isPaused && backButton && forwardButton) {
+            // Update button states
+            backButton.disabled = currentCommandIndex <= 0;
+            forwardButton.disabled = currentCommandIndex >= totalCommandsInSequence - 1;
+            backButton.style.opacity = backButton.disabled ? '0.5' : '1';
+            forwardButton.style.opacity = forwardButton.disabled ? '0.5' : '1';
+        }
     }
 
     pendingCommandsListElement.innerHTML = '';
