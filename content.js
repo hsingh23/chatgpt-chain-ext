@@ -15,6 +15,8 @@ let isPaused = false;
 let currentCommandIndex = 0;
 let totalCommandsInSequence = 0;
 let imageCommandCounter = 0;
+let isCommandExecuting = false; // Track if a command is currently being executed
+let isWaitingForResponse = false; // Track if we're waiting for ChatGPT response
 
 // --- DOM Elements for UI ---
 let sleepIndicatorElement = null;
@@ -339,7 +341,14 @@ function updateControlPanel() {
     progressStatusElement.textContent = `Progress: ${currentCommandIndex} / ${totalCommandsInSequence}`;
     if (isPaused) {
         progressStatusElement.textContent += " (Paused)";
-    }    // Show/hide navigation buttons based on pause state
+    }
+    if (isWaitingForResponse) {
+        progressStatusElement.textContent += " - Waiting for response...";
+    } else if (isCommandExecuting) {
+        progressStatusElement.textContent += " - Submitting command...";
+    }
+    
+    // Show/hide navigation buttons based on pause state
     const backButton = document.getElementById('ext-back-button');
     const forwardButton = document.getElementById('ext-forward-button');
     
@@ -487,6 +496,12 @@ async function processNextCommand() {
         return;
     }
 
+    // If we're already executing a command or waiting for response, don't start another
+    if (isCommandExecuting || isWaitingForResponse) {
+        console.log("Command already in progress, skipping duplicate execution");
+        return;
+    }
+
     if (!isChainRunning || currentCommandIndex >= totalCommandsInSequence) {
         console.log("Command chain finished or stopped.");
         await stopSequence(); // Ensure clean stop
@@ -500,11 +515,17 @@ async function processNextCommand() {
 
     console.log(`Executing command ${currentCommandIndex + 1}/${totalCommandsInSequence}: "${command.substring(0,50)}..."`);
     
+    isCommandExecuting = true; // Mark command as executing
+    
     try {
         await submitPrompt(command);
+        isCommandExecuting = false; // Command submitted successfully
+        isWaitingForResponse = true; // Now waiting for response
     } catch (error) {
         console.error("Error submitting prompt, sequence stopped:", error);
-        // stopSequence() is called within submitPrompt on failurbe
+        isCommandExecuting = false;
+        isWaitingForResponse = false;
+        // stopSequence() is called within submitPrompt on failure
         return;
     }
     
@@ -520,6 +541,7 @@ async function processNextCommand() {
             }
             if (isResponseComplete()) {
                 clearInterval(checkInterval);
+                isWaitingForResponse = false; // Response received
                 console.log(`ChatGPT response complete for: "${command.substring(0,50)}..."`);
 
                 // Increment command index *after* successful execution and before delays for *this* command
@@ -582,8 +604,10 @@ async function resumeSequence() {
         console.log("Sequence resumed.");
         updateControlPanel();
         // If a sleep was active, its visual countdown will resume via its own interval logic.
-        // Kick off the processing loop again.
-        processNextCommand();
+        // Only kick off the processing loop if we're not already waiting for a response
+        if (!isWaitingForResponse && !isCommandExecuting) {
+            processNextCommand();
+        }
     }
 }
 
@@ -591,6 +615,8 @@ async function stopSequence() {
     console.log("Stopping sequence...");
     isChainRunning = false;
     isPaused = false;
+    isCommandExecuting = false; // Reset execution state
+    isWaitingForResponse = false; // Reset waiting state
     currentChain = null;
     // currentCommandIndex = 0; // Keep currentCommandIndex to show final progress if needed, or reset
     // totalCommandsInSequence = 0;
