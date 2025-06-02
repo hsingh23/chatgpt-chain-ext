@@ -34,26 +34,22 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load saved prompts and settings
     chrome.storage.sync.get(['prompts', 'extensionSettings'], function (result) {
         const prompts = result.prompts || [];
-        const settings = { ...defaultSettings, ...(result.extensionSettings || {}) };
-
-        // Populate settings fields
+        const settings = { ...defaultSettings, ...(result.extensionSettings || {}) };        // Populate settings fields (convert from ms to user-friendly units)
         separatorInput.value = settings.separator;
-        defaultDelayMsInput.value = settings.defaultDelayMs;
+        defaultDelayMsInput.value = settings.defaultDelayMs / 1000; // Convert ms to seconds
         imageThrottleCountInput.value = settings.imageThrottleCount;
-        imageThrottleDelayMsInput.value = settings.imageThrottleDelayMs;
+        imageThrottleDelayMsInput.value = settings.imageThrottleDelayMs / 60000; // Convert ms to minutes
         enableSleepIndicatorCheckbox.checked = settings.enableSleepIndicator;
         enableFloatingProgressCheckbox.checked = settings.enableFloatingProgress;
         
         displayPrompts(prompts);
-    });
-
-    // Save settings
+    });    // Save settings
     saveSettingsButton.addEventListener('click', function () {
         const newSettings = {
             separator: separatorInput.value || defaultSettings.separator, // Also save separator with general settings
-            defaultDelayMs: parseInt(defaultDelayMsInput.value) || defaultSettings.defaultDelayMs,
+            defaultDelayMs: (parseInt(defaultDelayMsInput.value) || 5) * 1000, // Convert seconds to ms
             imageThrottleCount: parseInt(imageThrottleCountInput.value) || defaultSettings.imageThrottleCount,
-            imageThrottleDelayMs: parseInt(imageThrottleDelayMsInput.value) || defaultSettings.imageThrottleDelayMs,
+            imageThrottleDelayMs: (parseFloat(imageThrottleDelayMsInput.value) || 2) * 60000, // Convert minutes to ms
             enableSleepIndicator: enableSleepIndicatorCheckbox.checked,
             enableFloatingProgress: enableFloatingProgressCheckbox.checked
         };
@@ -105,8 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showStatus('Prompt text cannot be empty.', true);
         }
     });
-    
-    function displayPrompts(prompts) {
+      function displayPrompts(prompts) {
         promptsListDiv.innerHTML = '';
         if (prompts.length === 0) {
             promptsListDiv.textContent = 'No prompt chains saved yet.';
@@ -118,14 +113,31 @@ document.addEventListener('DOMContentLoaded', function () {
             div.className = 'prompt-item';
 
             const currentSeparator = separatorInput.value || defaultSettings.separator;
-            let previewText = prompt;
+            let commands = [];
+            
+            // Split the prompt into individual commands for better visualization
             if (currentSeparator !== '\\n' && currentSeparator !== '\n') {
-                 previewText = prompt.split(currentSeparator).join(`\n${currentSeparator}\n`);
+                commands = prompt.split(currentSeparator).map(cmd => cmd.trim()).filter(cmd => cmd);
+            } else {
+                commands = prompt.split(/\n+/).map(cmd => cmd.trim()).filter(cmd => cmd);
             }
+            
+            // Create a nicely formatted preview with numbered commands
+            const commandsHtml = commands.map((cmd, idx) => {
+                const shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + '...' : cmd;
+                return `<div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.05); border-radius: 4px; border-left: 3px solid #007bff;">
+                    <strong>Command ${idx + 1}:</strong> ${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+                </div>`;
+            }).join('');
             
             div.innerHTML = `
                 <div class="preview-mode">
-                    <div class="prompt-preview">${previewText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                    <div style="margin-bottom: 10px; font-weight: bold; color: #555;">
+                        Chain with ${commands.length} command${commands.length !== 1 ? 's' : ''}:
+                    </div>
+                    <div class="prompt-preview" style="max-height: 200px; overflow-y: auto;">
+                        ${commandsHtml}
+                    </div>
                     <div class="button-group">
                         <button class="use-prompt" data-prompt="${prompt.replace(/"/g, '&quot;')}">Use Chain</button>
                         <button class="edit-prompt secondary" data-index="${index}">Edit</button>
