@@ -36,20 +36,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const prompts = result.prompts || [];
         const settings = { ...defaultSettings, ...(result.extensionSettings || {}) };        // Populate settings fields (convert from ms to user-friendly units)
         separatorInput.value = settings.separator;
-        defaultDelayMsInput.value = settings.defaultDelayMs / 1000; // Convert ms to seconds
+        defaultDelayMsInput.value = (settings.defaultDelayMs / 1000).toFixed(1); // Convert ms to seconds with 1 decimal
         imageThrottleCountInput.value = settings.imageThrottleCount;
-        imageThrottleDelayMsInput.value = settings.imageThrottleDelayMs / 60000; // Convert ms to minutes
+        imageThrottleDelayMsInput.value = (settings.imageThrottleDelayMs / 60000).toFixed(1); // Convert ms to minutes with 1 decimal
         enableSleepIndicatorCheckbox.checked = settings.enableSleepIndicator;
-        enableFloatingProgressCheckbox.checked = settings.enableFloatingProgress;
-        
+        enableFloatingProgressCheckbox.checked = settings.enableFloatingProgress;        
         displayPrompts(prompts);
-    });    // Save settings
+    });
+
+    // Save settings
     saveSettingsButton.addEventListener('click', function () {
         const newSettings = {
             separator: separatorInput.value || defaultSettings.separator, // Also save separator with general settings
-            defaultDelayMs: (parseInt(defaultDelayMsInput.value) || 5) * 1000, // Convert seconds to ms
+            defaultDelayMs: Math.round((parseFloat(defaultDelayMsInput.value) || 5) * 1000), // Convert seconds to ms, round to avoid floating point issues
             imageThrottleCount: parseInt(imageThrottleCountInput.value) || defaultSettings.imageThrottleCount,
-            imageThrottleDelayMs: (parseFloat(imageThrottleDelayMsInput.value) || 2) * 60000, // Convert minutes to ms
+            imageThrottleDelayMs: Math.round((parseFloat(imageThrottleDelayMsInput.value) || 2) * 60000), // Convert minutes to ms, round to avoid floating point issues
             enableSleepIndicator: enableSleepIndicatorCheckbox.checked,
             enableFloatingProgress: enableFloatingProgressCheckbox.checked
         };
@@ -121,12 +122,11 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 commands = prompt.split(/\n+/).map(cmd => cmd.trim()).filter(cmd => cmd);
             }
-            
-            // Create a nicely formatted preview with numbered commands
+              // Create a nicely formatted preview with numbered commands
             const commandsHtml = commands.map((cmd, idx) => {
                 const shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + '...' : cmd;
-                return `<div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.05); border-radius: 4px; border-left: 3px solid #007bff;">
-                    <strong>Command ${idx + 1}:</strong> ${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+                return `<div style="margin-bottom: 12px; padding: 10px 0; background: rgba(0,0,0,0.05); border-radius: 6px; border-left: 4px solid #007bff; line-height: 1;">
+                    <span style="color: #333;">${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
                 </div>`;
             }).join('');
             
