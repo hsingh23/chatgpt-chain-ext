@@ -290,6 +290,7 @@ async function submitPrompt(prompt) {
     }
 
     textarea.value = prompt;
+    textarea.textContent = prompt;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     textarea.dispatchEvent(new Event('change', { bubbles: true })); // Good practice
 
