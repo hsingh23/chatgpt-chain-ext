@@ -277,8 +277,8 @@ function isResponseComplete() {
     // Check if the "Regenerate" button or a similar element indicating completion is visible,
     // and that the send button is enabled.
     const speechButton = document.querySelector('button[data-testid="composer-speech-button"]');
-    const sendButton = document.querySelector('button[data-testid="send-button"]');
-    return speechButton != null && (sendButton && !sendButton.disabled);
+    // const sendButton = document.querySelector('button[aria-label="Send prompt"][data-testid="send-button"]');
+    return speechButton != null;// && (sendButton && !sendButton.disabled);
 }
 
 async function submitPrompt(prompt) {
@@ -302,7 +302,7 @@ async function submitPrompt(prompt) {
                 console.log("Submit attempt paused.");
                 return;
             }
-            const button = document.querySelector('button[data-testid="send-button"]');
+            const button = document.querySelector('button[aria-label="Send prompt"][data-testid="send-button"]');
             if (button && !button.disabled) {
                 clearInterval(tryClick);
                 button.click();
@@ -419,7 +419,7 @@ async function processNextCommand() {
                 }
                 resolve();
             }
-        }, 1000);
+        }, 100);
     });
 
     if (isPaused) { // Final check before looping
