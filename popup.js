@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function () {
               // Create a nicely formatted preview with numbered commands
             const commandsHtml = commands.map((cmd, idx) => {
                 const shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + '...' : cmd;
-                return `<div style="margin-bottom: 12px; padding: 10px 0; background: rgba(0,0,0,0.05); border-radius: 6px; border-left: 4px solid #007bff; line-height: 1;">
+                return `<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 6px; border-left: 4px solid #007bff; line-height: 1;">
                     <span style="color: #333;">${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
                 </div>`;
             }).join('');
