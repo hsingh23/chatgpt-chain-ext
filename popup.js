@@ -29,19 +29,27 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => {
             statusMessageDiv.style.display = 'none';
         }, 3000);
-    }
-
-    // Load saved prompts and settings
-    chrome.storage.sync.get(['prompts', 'extensionSettings'], function (result) {
-        const prompts = result.prompts || [];
-        const settings = { ...defaultSettings, ...(result.extensionSettings || {}) };        // Populate settings fields (convert from ms to user-friendly units)
+    }    // Run migration first, then load data
+    migratePromptsToLocal();
+    
+    // Load saved prompts and settings (using different storage APIs)
+    // Settings from sync (small, should sync across devices)
+    chrome.storage.sync.get(['extensionSettings'], function (syncResult) {
+        const settings = { ...defaultSettings, ...(syncResult.extensionSettings || {}) };
+        
+        // Populate settings fields (convert from ms to user-friendly units)
         separatorInput.value = settings.separator;
         defaultDelayMsInput.value = (settings.defaultDelayMs / 1000).toFixed(1); // Convert ms to seconds with 1 decimal
         imageThrottleCountInput.value = settings.imageThrottleCount;
         imageThrottleDelayMsInput.value = (settings.imageThrottleDelayMs / 60000).toFixed(1); // Convert ms to minutes with 1 decimal
         enableSleepIndicatorCheckbox.checked = settings.enableSleepIndicator;
-        enableFloatingProgressCheckbox.checked = settings.enableFloatingProgress;        
-        displayPrompts(prompts);
+        enableFloatingProgressCheckbox.checked = settings.enableFloatingProgress;
+        
+        // Prompts from local storage (can be large, device-specific is OK)
+        chrome.storage.local.get(['prompts'], function (localResult) {
+            const prompts = localResult.prompts || [];
+            displayPrompts(prompts);
+        });
     });
 
     // Save settings
@@ -53,9 +61,13 @@ document.addEventListener('DOMContentLoaded', function () {
             imageThrottleDelayMs: Math.round((parseFloat(imageThrottleDelayMsInput.value) || 2) * 60000), // Convert minutes to ms, round to avoid floating point issues
             enableSleepIndicator: enableSleepIndicatorCheckbox.checked,
             enableFloatingProgress: enableFloatingProgressCheckbox.checked
-        };
-
-        chrome.storage.sync.set({ extensionSettings: newSettings }, function () {
+        };        chrome.storage.sync.set({ extensionSettings: newSettings }, function () {
+            if (chrome.runtime.lastError) {
+                console.error('Failed to save settings:', chrome.runtime.lastError);
+                showStatus('Failed to save settings: ' + chrome.runtime.lastError.message, true);
+                return;
+            }
+            
             showStatus('Settings saved successfully!');
             // Notify content script about config changes
             chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -74,35 +86,53 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     });
-    
-    // Save separator immediately when it changes (legacy, but good for responsiveness if user expects it)
+      // Save separator immediately when it changes (legacy, but good for responsiveness if user expects it)
     separatorInput.addEventListener('change', function () {
         chrome.storage.sync.get(['extensionSettings'], function(result) {
+            if (chrome.runtime.lastError) {
+                console.error('Failed to load settings for separator update:', chrome.runtime.lastError);
+                return;
+            }
+            
             const currentSettings = { ...defaultSettings, ...(result.extensionSettings || {}) };
-            currentSettings.separator = this.value;
-            chrome.storage.sync.set({ extensionSettings: currentSettings });
+            currentSettings.separator = separatorInput.value;
+            chrome.storage.sync.set({ extensionSettings: currentSettings }, function() {
+                if (chrome.runtime.lastError) {
+                    console.error('Failed to save separator:', chrome.runtime.lastError);
+                }
+            });
         });
     });
-
-
-    // Save new prompt
+    // Save new prompt (using local storage for large data)
     savePromptButton.addEventListener('click', function () {
         const promptText = newPromptInput.value.trim();
         if (promptText) {
-            chrome.storage.sync.get(['prompts'], function (result) {
+            chrome.storage.local.get(['prompts'], function (result) {
+                if (chrome.runtime.lastError) {
+                    console.error('Failed to load prompts:', chrome.runtime.lastError);
+                    showStatus('Failed to load existing prompts: ' + chrome.runtime.lastError.message, true);
+                    return;
+                }
+                
                 const prompts = result.prompts || [];
                 prompts.push(promptText);
-                chrome.storage.sync.set({ prompts }, function () {
+                chrome.storage.local.set({ prompts }, function () {
+                    if (chrome.runtime.lastError) {
+                        console.error('Failed to save prompt:', chrome.runtime.lastError);
+                        showStatus('Failed to save prompt chain: ' + chrome.runtime.lastError.message, true);
+                        return;
+                    }
+                    
                     displayPrompts(prompts);
                     newPromptInput.value = '';
-                    showStatus('Prompt chain saved!');
-                });
+                    showStatus('Prompt chain saved!');                });
             });
         } else {
             showStatus('Prompt text cannot be empty.', true);
         }
     });
-      function displayPrompts(prompts) {
+    
+    function displayPrompts(prompts) {
         promptsListDiv.innerHTML = '';
         if (prompts.length === 0) {
             promptsListDiv.textContent = 'No prompt chains saved yet.';
@@ -184,15 +214,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             });
-        });
-
-        document.querySelectorAll('.delete-prompt').forEach(button => {
+        });        document.querySelectorAll('.delete-prompt').forEach(button => {
             button.addEventListener('click', function () {
                 const index = parseInt(this.getAttribute('data-index'));
-                chrome.storage.sync.get(['prompts'], function (result) {
+                chrome.storage.local.get(['prompts'], function (result) {
+                    if (chrome.runtime.lastError) {
+                        console.error('Failed to load prompts for deletion:', chrome.runtime.lastError);
+                        showStatus('Failed to delete prompt: ' + chrome.runtime.lastError.message, true);
+                        return;
+                    }
+                    
                     const prompts = result.prompts || [];
                     prompts.splice(index, 1);
-                    chrome.storage.sync.set({ prompts }, function () {
+                    chrome.storage.local.set({ prompts }, function () {
+                        if (chrome.runtime.lastError) {
+                            console.error('Failed to save after deletion:', chrome.runtime.lastError);
+                            showStatus('Failed to delete prompt: ' + chrome.runtime.lastError.message, true);
+                            return;
+                        }
+                        
                         displayPrompts(prompts);
                         showStatus('Prompt chain deleted.');
                     });
@@ -212,13 +252,23 @@ document.addEventListener('DOMContentLoaded', function () {
             button.addEventListener('click', function () {
                 const index = parseInt(this.getAttribute('data-index'));
                 const promptItem = this.closest('.prompt-item');
-                const newText = promptItem.querySelector('.edit-textarea').value.trim();
-
-                if (newText) {
-                    chrome.storage.sync.get(['prompts'], function (result) {
+                const newText = promptItem.querySelector('.edit-textarea').value.trim();                if (newText) {
+                    chrome.storage.local.get(['prompts'], function (result) {
+                        if (chrome.runtime.lastError) {
+                            console.error('Failed to load prompts for editing:', chrome.runtime.lastError);
+                            showStatus('Failed to update prompt: ' + chrome.runtime.lastError.message, true);
+                            return;
+                        }
+                        
                         const prompts = result.prompts || [];
                         prompts[index] = newText;
-                        chrome.storage.sync.set({ prompts }, function () {
+                        chrome.storage.local.set({ prompts }, function () {
+                            if (chrome.runtime.lastError) {
+                                console.error('Failed to save edited prompt:', chrome.runtime.lastError);
+                                showStatus('Failed to update prompt: ' + chrome.runtime.lastError.message, true);
+                                return;
+                            }
+                            
                             displayPrompts(prompts);
                             showStatus('Prompt chain updated.');
                         });
@@ -238,4 +288,79 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    // Migration function to move prompts from sync to local storage
+    function migratePromptsToLocal() {
+        chrome.storage.sync.get(['prompts'], function(syncResult) {
+            if (chrome.runtime.lastError) {
+                console.error('Migration: Failed to check sync storage:', chrome.runtime.lastError);
+                return;
+            }
+            
+            if (syncResult.prompts && syncResult.prompts.length > 0) {
+                console.log('Found prompts in sync storage, migrating to local storage...');
+                
+                chrome.storage.local.get(['prompts'], function(localResult) {
+                    if (chrome.runtime.lastError) {
+                        console.error('Migration: Failed to check local storage:', chrome.runtime.lastError);
+                        return;
+                    }
+                    
+                    const localPrompts = localResult.prompts || [];
+                    const syncPrompts = syncResult.prompts;
+                    
+                    // Merge prompts (avoid duplicates)
+                    const allPrompts = [...localPrompts];
+                    syncPrompts.forEach(syncPrompt => {
+                        if (!allPrompts.includes(syncPrompt)) {
+                            allPrompts.push(syncPrompt);
+                        }
+                    });
+                    
+                    // Save to local storage
+                    chrome.storage.local.set({ prompts: allPrompts }, function() {
+                        if (chrome.runtime.lastError) {
+                            console.error('Migration: Failed to save to local storage:', chrome.runtime.lastError);
+                            return;
+                        }
+                        
+                        console.log(`Migration complete: ${syncPrompts.length} prompts moved to local storage`);
+                        
+                        // Remove from sync storage to free up quota
+                        chrome.storage.sync.remove(['prompts'], function() {
+                            if (chrome.runtime.lastError) {
+                                console.error('Migration: Failed to remove from sync storage:', chrome.runtime.lastError);
+                            } else {
+                                console.log('Migration: Removed prompts from sync storage');
+                            }
+                        });
+                    });
+                });
+            }
+        });
+    }
+
+    // Start migration on extension load
+    migratePromptsToLocal();
+
+    // Add storage info to the UI
+    function addStorageInfo() {
+        const storageInfo = document.createElement('div');
+        storageInfo.style.cssText = `
+            font-size: 11px; 
+            color: #666; 
+            margin-top: 10px; 
+            padding: 8px; 
+            background: #f8f9fa; 
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        `;
+        storageInfo.innerHTML = `
+            <strong>📍 Storage Info:</strong> Settings sync across devices, prompt chains are stored locally for unlimited size.
+        `;
+        document.body.appendChild(storageInfo);
+    }
+
+    // Add storage info to the popup
+    addStorageInfo();
 });

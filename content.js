@@ -44,6 +44,12 @@ const C_DEFAULT_SETTINGS = {
 // --- Load Configuration from Storage ---
 function loadConfig() {
     chrome.storage.sync.get('extensionSettings', (data) => {
+        if (chrome.runtime.lastError) {
+            console.error('Failed to load configuration:', chrome.runtime.lastError);
+            config = { ...C_DEFAULT_SETTINGS };
+            return;
+        }
+        
         if (data.extensionSettings) {
             config = { ...C_DEFAULT_SETTINGS, ...data.extensionSettings };
             console.log('Configuration loaded from storage:', config);
@@ -51,7 +57,11 @@ function loadConfig() {
             config = { ...C_DEFAULT_SETTINGS };
             console.log('Using default configuration:', config);
             // Optionally save defaults to storage if they don't exist
-            chrome.storage.sync.set({ extensionSettings: config });
+            chrome.storage.sync.set({ extensionSettings: config }, (result) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Failed to save default settings:', chrome.runtime.lastError);
+                }
+            });
         }
         // Update UI elements based on loaded config (e.g., create/destroy if toggled)
         if (isChainRunning) { // If a chain is running, update its visual elements
@@ -230,10 +240,13 @@ function createControlPanel() {
                 y: parseInt(controlPanelElement.style.top)
             };
             config.controlPanelPosition = newPosition;
-            
-            // Save to storage
+              // Save to storage
             chrome.storage.sync.set({ 
                 extensionSettings: { ...config } 
+            }, (result) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Failed to save control panel position:', chrome.runtime.lastError);
+                }
             });
             
             isDragging = false;
