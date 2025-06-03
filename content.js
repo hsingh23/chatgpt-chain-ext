@@ -206,7 +206,7 @@ function createControlPanel() {
   controlPanelElement.id = "ext-control-panel";
   controlPanelElement.style.cssText = `
         position: fixed; top: ${initialTop}px; left: ${initialLeft}px;
-        background-color: rgba(20, 20, 80, 0.85); color: white; padding: 15px;
+        background-color: rgb(221 234 246 / 85%); color: white; padding: 15px;
         border-radius: 10px; z-index: 20000; font-family: Arial, sans-serif;
         font-size: 14px; display: none; width: 280px; box-shadow: 0 0 15px rgba(0,0,0,0.4);
         cursor: move; user-select: none;
