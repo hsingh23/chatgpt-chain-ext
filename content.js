@@ -278,11 +278,32 @@ function createControlPanel() {
       isDragging = false;
     }
   });
-
   progressStatusElement = document.createElement("div");
   progressStatusElement.id = "ext-progress-status";
-  progressStatusElement.style.marginBottom = "10px";
+  progressStatusElement.style.marginBottom = "8px";
   progressStatusElement.style.fontWeight = "bold";
+  
+  // Add progress bar
+  const progressBarContainer = document.createElement("div");
+  progressBarContainer.style.cssText = `
+    background-color: rgba(255,255,255,0.2); 
+    border-radius: 10px; 
+    height: 6px; 
+    margin-bottom: 10px; 
+    overflow: hidden;
+  `;
+  
+  const progressBar = document.createElement("div");
+  progressBar.id = "ext-progress-bar";
+  progressBar.style.cssText = `
+    height: 100%; 
+    width: 0%; 
+    background-color: #007bff; 
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 10px;
+  `;
+  
+  progressBarContainer.appendChild(progressBar);
   pendingCommandsListElement = document.createElement("ul");
   pendingCommandsListElement.id = "ext-pending-commands";
   pendingCommandsListElement.style.cssText = `
@@ -337,10 +358,10 @@ function createControlPanel() {
 
   navContainer.appendChild(backButton);
   navContainer.appendChild(forwardButton);
-
   buttonContainer.appendChild(pauseResumeButton);
   buttonContainer.appendChild(stopButton);
   controlPanelElement.appendChild(progressStatusElement);
+  controlPanelElement.appendChild(progressBarContainer);
   controlPanelElement.appendChild(navContainer);
   controlPanelElement.appendChild(pendingCommandsListElement);
   controlPanelElement.appendChild(buttonContainer);
