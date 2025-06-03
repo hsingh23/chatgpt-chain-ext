@@ -12,7 +12,7 @@
    },
    "manifest_version": 3,
    "name": "ChatGPT Chain Prompts - Free Automated Message Queue",
-   "permissions": [ "storage" ],
+   "permissions": [ "storage", "activeTab", "scripting" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "1.1"
 }
