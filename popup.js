@@ -232,14 +232,24 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                     <div class="prompt-preview" style="max-height: 200px; overflow-y: auto;">
                         ${commandsHtml}
-                    </div>
-                    <div class="button-group">
-                        <button class="use-prompt" data-prompt="${prompt.replace(
-                          /"/g,
-                          "&quot;"
-                        )}">Use Chain</button>
-                        <button class="edit-prompt secondary" data-index="${index}">Edit</button>
-                        <button class="delete-prompt danger" data-index="${index}">Delete</button>
+                    </div>                    <div class="button-group">
+                        <div class="start-position-selector">
+                            <label for="start-position-${index}">Start from:</label>
+                            <select class="start-position-select" id="start-position-${index}">
+                                ${commands.map((cmd, cmdIdx) => {
+                                    const shortCmd = cmd.length > 35 ? cmd.substring(0, 35) + "..." : cmd;
+                                    return `<option value="${cmdIdx}">Step ${cmdIdx + 1}: ${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</option>`;
+                                }).join('')}
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="use-prompt" data-prompt="${prompt.replace(
+                              /"/g,
+                              "&quot;"
+                            )}" data-index="${index}">Play Chain</button>
+                            <button class="edit-prompt secondary" data-index="${index}">Edit</button>
+                            <button class="delete-prompt danger" data-index="${index}">Delete</button>
+                        </div>
                     </div>
                 </div>
                 <div class="edit-mode" style="display: none;">
@@ -251,48 +261,81 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
             `;
       promptsListDiv.appendChild(div);
-    });
-
-    // Add event listeners for action buttons
+    });    // Add event listeners for action buttons
     document.querySelectorAll(".use-prompt").forEach((button) => {
       button.addEventListener("click", function () {
         const prompt = this.getAttribute("data-prompt");
+        const chainIndex = this.getAttribute("data-index");
+        const startPositionSelect = document.getElementById(`start-position-${chainIndex}`);
+        const startPosition = startPositionSelect ? parseInt(startPositionSelect.value) : 0;
+        
         const currentSeparator =
-          separatorInput.value || defaultSettings.separator;
-        chrome.tabs.query(
+          separatorInput.value || defaultSettings.separator;        chrome.tabs.query(
           { active: true, currentWindow: true },
           function (tabs) {
-            if (tabs[0] && tabs[0].id) {
-              chrome.tabs.sendMessage(
-                tabs[0].id,
-                {
-                  action: "usePrompt",
-                  prompt,
-                  separator: currentSeparator,
-                },
-                (response) => {
-                  if (chrome.runtime.lastError) {
-                    console.error(
-                      "Error sending message to content script:",
-                      chrome.runtime.lastError.message
-                    );
-                    showStatus(
-                      `Error starting chain: ${chrome.runtime.lastError.message}`,
-                      true
-                    );
-                  } else if (response) {
-                    if (response.status === "started") {
-                      showStatus(`Chain started: ${response.message}`);
-                      window.close(); // Close popup after successfully starting
+            if (tabs[0] && tabs[0].id) {              // Check if we're on a ChatGPT page
+              if (!tabs[0].url || !tabs[0].url.includes('chatgpt.com')) {
+                showStatus(
+                  "Please navigate to ChatGPT (https://chatgpt.com) to use this extension.",
+                  true
+                );
+                return;
+              }
+
+              // Ensure content script is loaded before sending message
+              ensureContentScript(tabs[0].id, (isLoaded) => {
+                if (!isLoaded) {
+                  showStatus(
+                    "Failed to load extension on this page. Please refresh and try again.",
+                    true
+                  );
+                  return;
+                }
+
+                chrome.tabs.sendMessage(
+                  tabs[0].id,
+                  {
+                    action: "usePrompt",
+                    prompt,
+                    separator: currentSeparator,
+                    startPosition: startPosition,
+                  },
+                  (response) => {
+                    if (chrome.runtime.lastError) {
+                      console.error(
+                        "Error sending message to content script:",
+                        chrome.runtime.lastError.message
+                      );
+                      
+                      // Provide more helpful error messages
+                      let errorMessage = "Failed to start chain. ";
+                      if (chrome.runtime.lastError.message.includes("Receiving end does not exist")) {
+                        errorMessage += "Please refresh the ChatGPT page and try again.";
+                      } else {
+                        errorMessage += chrome.runtime.lastError.message;
+                      }
+                      
+                      showStatus(errorMessage, true);
+                    } else if (response) {
+                      if (response.status === "started") {
+                        const startInfo = startPosition > 0 ? ` (starting from step ${startPosition + 1})` : '';
+                        showStatus(`Chain started: ${response.message}${startInfo}`);
+                        window.close(); // Close popup after successfully starting
+                      } else {
+                        showStatus(
+                          `Could not start chain: ${response.message}`,
+                          true
+                        );
+                      }
                     } else {
                       showStatus(
-                        `Could not start chain: ${response.message}`,
+                        "No response from ChatGPT page. Please refresh the page and try again.",
                         true
                       );
                     }
                   }
-                }
-              );
+                );
+              });
             } else {
               showStatus("Could not find active tab to send prompt.", true);
             }
@@ -491,4 +534,54 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Add storage info to the popup
   addStorageInfo();
+
+  // Add page status check
+  function checkPageStatus() {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      const statusDiv = document.getElementById('page-status');
+      if (tabs[0] && tabs[0].url) {
+        if (tabs[0].url.includes('chatgpt.com')) {
+          statusDiv.textContent = '✅ ChatGPT page detected';
+          statusDiv.className = 'page-status-success';
+        } else {
+          statusDiv.textContent = '⚠️ Navigate to ChatGPT to use this extension';
+          statusDiv.className = 'page-status-warning';
+        }
+      } else {
+        statusDiv.textContent = '❌ Could not detect current page';
+        statusDiv.className = 'page-status-error';
+      }
+    });
+  }
+
+  // Check page status when popup opens
+  checkPageStatus();
+
+  // Function to ensure content script is loaded
+  function ensureContentScript(tabId, callback) {
+    // Try to ping the content script first
+    chrome.tabs.sendMessage(tabId, { action: "ping" }, (response) => {
+      if (chrome.runtime.lastError || !response) {
+        // Content script not loaded, try to inject it
+        chrome.scripting.executeScript(
+          {
+            target: { tabId: tabId },
+            files: ['content.js']
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error("Failed to inject content script:", chrome.runtime.lastError);
+              callback(false);
+            } else {
+              console.log("Content script injected successfully");
+              callback(true);
+            }
+          }
+        );
+      } else {
+        // Content script is already loaded
+        callback(true);
+      }
+    });
+  }
 });

@@ -365,15 +365,31 @@ function updateControlPanel() {
       createControlPanel();
     if (!controlPanelElement) return;
   }
-
-  progressStatusElement.textContent = `Progress: ${currentCommandIndex} / ${totalCommandsInSequence}`;
+  let statusText = `Step ${currentCommandIndex + 1} of ${totalCommandsInSequence}`;
+  let statusColor = "#007bff";
+  
   if (isPaused) {
-    progressStatusElement.textContent += " (Paused)";
-  }
-  if (isWaitingForResponse) {
-    progressStatusElement.textContent += " - Waiting for response...";
+    statusText += " • ⏸️ PAUSED";
+    statusColor = "#dc3545";
+  } else if (isWaitingForResponse) {
+    statusText += " • ⏳ Waiting for ChatGPT...";
+    statusColor = "#6f42c1";
   } else if (isCommandExecuting) {
-    progressStatusElement.textContent += " - Submitting command...";
+    statusText += " • 📤 Submitting command...";
+    statusColor = "#fd7e14";
+  } else if (isChainRunning) {
+    statusText += " • ▶️ Running";
+    statusColor = "#28a745";
+  }
+  
+  progressStatusElement.innerHTML = `<span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>`;
+  
+  // Add completion percentage
+  const percentage = totalCommandsInSequence > 0 ? Math.round((currentCommandIndex / totalCommandsInSequence) * 100) : 0;
+  const progressBar = document.getElementById("ext-progress-bar");
+  if (progressBar) {
+    progressBar.style.width = `${percentage}%`;
+    progressBar.style.backgroundColor = statusColor;
   }
 
   // Show/hide navigation buttons based on pause state
@@ -392,36 +408,123 @@ function updateControlPanel() {
       forwardButton.style.opacity = forwardButton.disabled ? "0.5" : "1";
     }
   }
-
   pendingCommandsListElement.innerHTML = "";
   if (currentChain) {
+    // Show completed commands (max 2 most recent)
+    const completedStart = Math.max(0, currentCommandIndex - 2);
+    const completed = currentChain.slice(completedStart, currentCommandIndex);
+    
+    completed.forEach((cmd, idx) => {
+      const li = document.createElement("li");
+      const { command: cleanCmd } = parseCommand(cmd);
+      const actualIndex = completedStart + idx + 1;
+      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${actualIndex}. ${cleanCmd.substring(0, 40)}${cleanCmd.length > 40 ? "..." : ""}</span>`;
+      li.style.fontSize = "12px";
+      li.style.marginBottom = "4px";
+      pendingCommandsListElement.appendChild(li);
+    });
+
+    // Show current executing command
+    if (currentCommandIndex < totalCommandsInSequence) {
+      const currentCmd = currentChain[currentCommandIndex];
+      const li = document.createElement("li");
+      const { command: cleanCmd } = parseCommand(currentCmd);
+      
+      let statusIcon = "▶️";
+      let statusText = "CURRENT";
+      let statusColor = "#007bff";
+      
+      if (isCommandExecuting) {
+        statusIcon = "📤";
+        statusText = "SUBMITTING";
+        statusColor = "#fd7e14";
+      } else if (isWaitingForResponse) {
+        statusIcon = "⏳";
+        statusText = "WAITING FOR RESPONSE";
+        statusColor = "#6f42c1";
+      } else if (isPaused) {
+        statusIcon = "⏸️";
+        statusText = "PAUSED";
+        statusColor = "#dc3545";
+      }
+      
+      li.innerHTML = `
+        <div style="background: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 8px; margin: 4px 0; border-radius: 4px;">
+          <div style="color: ${statusColor}; font-weight: bold; font-size: 11px; margin-bottom: 2px;">
+            ${statusIcon} ${statusText}
+          </div>
+          <div style="font-weight: bold; color: #333;">
+            ${currentCommandIndex + 1}. ${cleanCmd.substring(0, 50)}${cleanCmd.length > 50 ? "..." : ""}
+          </div>
+        </div>
+      `;
+      pendingCommandsListElement.appendChild(li);
+    }
+
+    // Show upcoming commands (next 4)
     const upcoming = currentChain.slice(
-      currentCommandIndex,
+      currentCommandIndex + 1,
       currentCommandIndex + 5
     );
+    
+    upcoming.forEach((cmd, idx) => {
+      const li = document.createElement("li");
+      const { command: cleanCmd } = parseCommand(cmd);
+      const actualIndex = currentCommandIndex + idx + 2;
+      
+      if (idx === 0) {
+        // Next command - highlight it
+        li.innerHTML = `
+          <div style="background: #f8f9fa; border-left: 4px solid #17a2b8; padding: 6px; margin: 4px 0; border-radius: 4px;">
+            <div style="color: #17a2b8; font-weight: bold; font-size: 11px; margin-bottom: 2px;">
+              ⏭️ NEXT
+            </div>
+            <div style="font-weight: 600; color: #333;">
+              ${actualIndex}. ${cleanCmd.substring(0, 45)}${cleanCmd.length > 45 ? "..." : ""}
+            </div>
+          </div>
+        `;
+      } else {
+        // Future commands
+        li.innerHTML = `<span style="color: #6c757d;">⏸</span> <span style="color: #6c757d;">${actualIndex}. ${cleanCmd.substring(0, 35)}${cleanCmd.length > 35 ? "..." : ""}</span>`;
+        li.style.fontSize = "12px";
+        li.style.marginBottom = "2px";
+      }
+      
+      pendingCommandsListElement.appendChild(li);
+    });
+    
+    // Show if there are more commands beyond what's displayed
+    const remainingCount = totalCommandsInSequence - (currentCommandIndex + 5);
+    if (remainingCount > 0) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span style="color: #6c757d; font-style: italic;">... and ${remainingCount} more command${remainingCount !== 1 ? 's' : ''}</span>`;
+      li.style.fontSize = "11px";
+      li.style.marginTop = "8px";
+      pendingCommandsListElement.appendChild(li);
+    }
+
+    // Handle edge cases
     if (
-      upcoming.length === 0 &&
       currentCommandIndex >= totalCommandsInSequence &&
       isChainRunning
     ) {
       const li = document.createElement("li");
-      li.textContent = "Finishing last command...";
+      li.innerHTML = `
+        <div style="background: #28a74515; border-left: 4px solid #28a745; padding: 8px; margin: 4px 0; border-radius: 4px;">
+          <div style="color: #28a745; font-weight: bold; font-size: 11px;">
+            🏁 FINISHING
+          </div>
+          <div style="color: #333;">Completing final command...</div>
+        </div>
+      `;
       pendingCommandsListElement.appendChild(li);
-    } else if (upcoming.length === 0 && !isChainRunning) {
+    } else if (!isChainRunning && totalCommandsInSequence === 0) {
       const li = document.createElement("li");
-      li.textContent = "No commands pending.";
+      li.innerHTML = `<span style="color: #6c757d; font-style: italic;">No commands in queue</span>`;
+      li.style.fontSize = "12px";
       pendingCommandsListElement.appendChild(li);
     }
-    upcoming.forEach((cmd, idx) => {
-      const li = document.createElement("li");
-      const { command: cleanCmd } = parseCommand(cmd); // Show clean command
-      li.textContent = `${currentCommandIndex + idx + 1}. ${cleanCmd.substring(
-        0,
-        30
-      )}${cleanCmd.length > 30 ? "..." : ""}`;
-      if (idx === 0) li.style.fontWeight = "bold";
-      pendingCommandsListElement.appendChild(li);
-    });
   }
 
   pauseResumeButton.textContent = isPaused ? "Resume" : "Pause";
@@ -720,7 +823,10 @@ async function stopSequence() {
 
 // --- Message Listener ---
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.action === "usePrompt") {
+  if (request.action === "ping") {
+    sendResponse({ status: "ready" });
+    return true;
+  } else if (request.action === "usePrompt") {
     if (isChainRunning) {
       console.warn("A command chain is already running.");
       sendResponse({
@@ -753,23 +859,29 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (currentChain && currentChain.length > 0) {
       isChainRunning = true;
       isPaused = false;
-      currentCommandIndex = 0;
+      
+      // Handle start position
+      const startPosition = request.startPosition || 0;
+      currentCommandIndex = Math.max(0, Math.min(startPosition, currentChain.length - 1));
+      
       totalCommandsInSequence = currentChain.length;
       imageCommandCounter = 0;
 
       if (pauseResumeButton) pauseResumeButton.disabled = false;
       if (stopButton) stopButton.disabled = false;
 
+      const startInfo = currentCommandIndex > 0 ? ` (starting from step ${currentCommandIndex + 1})` : '';
       console.log(
-        `Starting new chain with ${totalCommandsInSequence} commands.`
+        `Starting new chain with ${totalCommandsInSequence} commands${startInfo}.`
       );
       updateControlPanel(); // Show and update panel
 
       processNextCommand(); // Start the chain
 
+      const remainingCommands = totalCommandsInSequence - currentCommandIndex;
       sendResponse({
         status: "started",
-        message: `${totalCommandsInSequence} commands.`,
+        message: `${remainingCommands} commands remaining`,
       });
     } else {
       sendResponse({
