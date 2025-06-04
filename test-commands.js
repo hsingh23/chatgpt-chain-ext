@@ -63,14 +63,52 @@ function testParseCommand(promptText) {
   return { command, explicitDelayMs, isPauseCommand: false };
 }
 
-console.log("Testing new command syntax:");
-console.log("=".repeat(50));
+const assert = require("assert");
+
+// Expected results for each test command
+const expectedResults = [
+  { command: "Tell me about AI", explicitDelayMs: 5000, isPauseCommand: false },
+  {
+    command: "Then explain machine learning",
+    explicitDelayMs: 120000,
+    isPauseCommand: false,
+  },
+  {
+    command: "Create a summary  and analyze it",
+    explicitDelayMs: 30000,
+    isPauseCommand: false,
+  },
+  { command: "", explicitDelayMs: 0, isPauseCommand: true },
+  { command: "Review this document", explicitDelayMs: 0, isPauseCommand: true },
+  { command: "Manual checkpoint", explicitDelayMs: 0, isPauseCommand: true },
+  { command: "Old format test", explicitDelayMs: 10000, isPauseCommand: false },
+  { command: "Legacy command", explicitDelayMs: 120000, isPauseCommand: false },
+  {
+    command: "Normal prompt without any special syntax",
+    explicitDelayMs: 0,
+    isPauseCommand: false,
+  },
+  { command: "Another regular command", explicitDelayMs: 0, isPauseCommand: false },
+];
 
 testCommands.forEach((cmd, idx) => {
   const result = testParseCommand(cmd);
-  console.log(`Test ${idx + 1}: "${cmd}"`);
-  console.log(`  -> Command: "${result.command}"`);
-  console.log(`  -> Delay: ${result.explicitDelayMs}ms`);
-  console.log(`  -> Is Pause: ${result.isPauseCommand}`);
-  console.log("");
+  const expected = expectedResults[idx];
+  assert.strictEqual(
+    result.command,
+    expected.command,
+    `Command mismatch for test ${idx + 1}`
+  );
+  assert.strictEqual(
+    result.explicitDelayMs,
+    expected.explicitDelayMs,
+    `Delay mismatch for test ${idx + 1}`
+  );
+  assert.strictEqual(
+    result.isPauseCommand,
+    expected.isPauseCommand,
+    `Pause flag mismatch for test ${idx + 1}`
+  );
 });
+
+console.log("All tests passed!");
