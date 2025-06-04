@@ -434,28 +434,32 @@ function updateControlPanel() {
     // Show completed commands (max 2 most recent)
     const completedStart = Math.max(0, currentCommandIndex - 2);
     const completed = currentChain.slice(completedStart, currentCommandIndex);
-    
-    completed.forEach((cmd, idx) => {
+      completed.forEach((cmd, idx) => {
       const li = document.createElement("li");
-      const { command: cleanCmd } = parseCommand(cmd);
+      const { command: cleanCmd, isPauseCommand } = parseCommand(cmd);
       const actualIndex = completedStart + idx + 1;
-      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${actualIndex}. ${cleanCmd.substring(0, 40)}${cleanCmd.length > 40 ? "..." : ""}</span>`;
+      const displayText = isPauseCommand && cleanCmd.trim() === '' 
+        ? `${actualIndex}. [PAUSE COMMAND]` 
+        : `${actualIndex}. ${cleanCmd.substring(0, 40)}${cleanCmd.length > 40 ? "..." : ""}`;
+      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${displayText}</span>`;
       li.style.fontSize = "12px";
       li.style.marginBottom = "4px";
       pendingCommandsListElement.appendChild(li);
-    });
-
-    // Show current executing command
+    });    // Show current executing command
     if (currentCommandIndex < totalCommandsInSequence) {
       const currentCmd = currentChain[currentCommandIndex];
       const li = document.createElement("li");
-      const { command: cleanCmd } = parseCommand(currentCmd);
+      const { command: cleanCmd, isPauseCommand } = parseCommand(currentCmd);
       
       let statusIcon = "▶️";
       let statusText = "CURRENT";
       let statusColor = "#007bff";
       
-      if (isCommandExecuting) {
+      if (isPauseCommand) {
+        statusIcon = "⏸️";
+        statusText = "PAUSE COMMAND";
+        statusColor = "#ffc107";
+      } else if (isCommandExecuting) {
         statusIcon = "📤";
         statusText = "SUBMITTING";
         statusColor = "#fd7e14";
@@ -469,13 +473,17 @@ function updateControlPanel() {
         statusColor = "#dc3545";
       }
       
+      const displayText = isPauseCommand && cleanCmd.trim() === '' 
+        ? `${currentCommandIndex + 1}. [PAUSE COMMAND]` 
+        : `${currentCommandIndex + 1}. ${cleanCmd.substring(0, 50)}${cleanCmd.length > 50 ? "..." : ""}`;
+      
       li.innerHTML = `
         <div style="background: ${statusColor}15; border-left: 4px solid ${statusColor}; padding: 8px; margin: 4px 0; border-radius: 4px;">
           <div style="color: ${statusColor}; font-weight: bold; font-size: 11px; margin-bottom: 2px;">
             ${statusIcon} ${statusText}
           </div>
           <div style="font-weight: bold; color: #333;">
-            ${currentCommandIndex + 1}. ${cleanCmd.substring(0, 50)}${cleanCmd.length > 50 ? "..." : ""}
+            ${displayText}
           </div>
         </div>
       `;
@@ -487,11 +495,14 @@ function updateControlPanel() {
       currentCommandIndex + 1,
       currentCommandIndex + 5
     );
-    
-    upcoming.forEach((cmd, idx) => {
+      upcoming.forEach((cmd, idx) => {
       const li = document.createElement("li");
-      const { command: cleanCmd } = parseCommand(cmd);
+      const { command: cleanCmd, isPauseCommand } = parseCommand(cmd);
       const actualIndex = currentCommandIndex + idx + 2;
+      
+      const displayText = isPauseCommand && cleanCmd.trim() === '' 
+        ? `${actualIndex}. [PAUSE COMMAND]` 
+        : `${actualIndex}. ${cleanCmd.substring(0, 45)}${cleanCmd.length > 45 ? "..." : ""}`;
       
       if (idx === 0) {
         // Next command - highlight it
@@ -501,13 +512,16 @@ function updateControlPanel() {
               ⏭️ NEXT
             </div>
             <div style="font-weight: 600; color: #333;">
-              ${actualIndex}. ${cleanCmd.substring(0, 45)}${cleanCmd.length > 45 ? "..." : ""}
+              ${displayText}
             </div>
           </div>
         `;
       } else {
         // Future commands
-        li.innerHTML = `<span style="color: #6c757d;">⏸</span> <span style="color: #6c757d;">${actualIndex}. ${cleanCmd.substring(0, 35)}${cleanCmd.length > 35 ? "..." : ""}</span>`;
+        const shorterDisplayText = isPauseCommand && cleanCmd.trim() === '' 
+          ? `${actualIndex}. [PAUSE COMMAND]` 
+          : `${actualIndex}. ${cleanCmd.substring(0, 35)}${cleanCmd.length > 35 ? "..." : ""}`;
+        li.innerHTML = `<span style="color: #6c757d;">⏸</span> <span style="color: #6c757d;">${shorterDisplayText}</span>`;
         li.style.fontSize = "12px";
         li.style.marginBottom = "2px";
       }
@@ -640,22 +654,46 @@ async function submitPrompt(prompt) {
 }
 
 function parseCommand(promptText) {
-  const sleepTagRegex = /\$sleep(\d+)([sm])\$/i;
+  // Check for pause command first
+  const pauseRegex = /\$pause\$/i;
+  if (pauseRegex.test(promptText)) {
+    const command = promptText.replace(pauseRegex, "").trim();
+    return { command, explicitDelayMs: 0, isPauseCommand: true };
+  }
+
+  // Check for new wait syntax: $wait 30s$ or $wait 2m$
+  const waitTagRegex = /\$wait\s*(\d+)([sm])\$/i;
   let explicitDelayMs = 0;
   let command = promptText;
-  const match = promptText.match(sleepTagRegex);
+  const waitMatch = promptText.match(waitTagRegex);
 
-  if (match) {
-    const duration = parseInt(match[1]);
-    const unit = match[2].toLowerCase();
+  if (waitMatch) {
+    const duration = parseInt(waitMatch[1]);
+    const unit = waitMatch[2].toLowerCase();
     if (unit === "s") {
       explicitDelayMs = duration * 1000;
     } else if (unit === "m") {
       explicitDelayMs = duration * 60 * 1000;
     }
-    command = promptText.replace(sleepTagRegex, "").trim();
+    command = promptText.replace(waitTagRegex, "").trim();
+  } else {
+    // Legacy support for old sleep syntax: $sleep30s$
+    const sleepTagRegex = /\$sleep\s*(\d+)([sm])\$/i;
+    const sleepMatch = promptText.match(sleepTagRegex);
+
+    if (sleepMatch) {
+      const duration = parseInt(sleepMatch[1]);
+      const unit = sleepMatch[2].toLowerCase();
+      if (unit === "s") {
+        explicitDelayMs = duration * 1000;
+      } else if (unit === "m") {
+        explicitDelayMs = duration * 60 * 1000;
+      }
+      command = promptText.replace(sleepTagRegex, "").trim();
+    }
   }
-  return { command, explicitDelayMs };
+
+  return { command, explicitDelayMs, isPauseCommand: false };
 }
 
 async function processNextCommand() {
@@ -688,9 +726,58 @@ async function processNextCommand() {
   }
 
   updateControlPanel();
-
   const rawPrompt = currentChain[currentCommandIndex];
-  const { command, explicitDelayMs } = parseCommand(rawPrompt);
+  const { command, explicitDelayMs, isPauseCommand } = parseCommand(rawPrompt);
+
+  // Handle pause command
+  if (isPauseCommand) {
+    console.log(`Pause command encountered at step ${currentCommandIndex + 1}`);
+    
+    // If there's a command text with the pause, execute it first
+    if (command.trim().length > 0) {
+      console.log(`Executing command before pause: "${command.substring(0, 50)}..."`);
+      
+      isCommandExecuting = true;
+      
+      try {
+        await submitPrompt(command);
+        isCommandExecuting = false;
+        isWaitingForResponse = true;
+        
+        // Wait for ChatGPT response
+        await new Promise((resolve) => {
+          const checkInterval = setInterval(async () => {
+            if (isPaused) {
+              console.log("Paused while waiting for ChatGPT response.");
+              updateControlPanel();
+              return;
+            }
+            if (isResponseComplete()) {
+              clearInterval(checkInterval);
+              isWaitingForResponse = false;
+              console.log(`ChatGPT response complete for: "${command.substring(0, 50)}..."`);
+              resolve();
+            }
+          }, 100);
+        });
+      } catch (error) {
+        console.error("Error submitting prompt before pause, sequence stopped:", error);
+        isCommandExecuting = false;
+        isWaitingForResponse = false;
+        return;
+      }
+    }
+    
+    // Move to next command index after executing the command (if any)
+    currentCommandIndex++;
+    
+    // Now pause the sequence
+    isPaused = true;
+    console.log("Sequence automatically paused due to $pause$ command.");
+    updateControlPanel();
+    
+    return; // Stop execution here until manually resumed
+  }
 
   console.log(
     `Executing command ${
