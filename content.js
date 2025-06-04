@@ -17,6 +17,9 @@ let totalCommandsInSequence = 0;
 let imageCommandCounter = 0;
 let isCommandExecuting = false; // Track if a command is currently being executed
 let isWaitingForResponse = false; // Track if we're waiting for ChatGPT response
+let isImageThrottleActive = false; // Track if image throttle is currently active
+let imageThrottleStartTime = 0; // When the image throttle started
+let imageThrottleEndTime = 0; // When the image throttle will end
 
 // --- DOM Elements for UI ---
 let sleepIndicatorElement = null;
@@ -355,14 +358,64 @@ function createControlPanel() {
       updateControlPanel();
     }
   };
-
   navContainer.appendChild(backButton);
   navContainer.appendChild(forwardButton);
   buttonContainer.appendChild(pauseResumeButton);
   buttonContainer.appendChild(stopButton);
+
+  // Quick wait insertion controls (shown when paused or running)
+  const quickWaitContainer = document.createElement("div");
+  quickWaitContainer.id = "ext-quick-wait-container";
+  quickWaitContainer.style.cssText = `margin-bottom: 8px; display: none;`;
+
+  const quickWaitLabel = document.createElement("div");
+  quickWaitLabel.textContent = "Insert Wait:";
+  quickWaitLabel.style.cssText = `font-size: 11px; color: #555; margin-bottom: 4px; font-weight: bold;`;
+
+  const quickWaitButtons = document.createElement("div");
+  quickWaitButtons.style.cssText = `display: flex; gap: 4px;`;
+
+  const waitDurations = [
+    { label: "30s", ms: 30000 },
+    { label: "1m", ms: 60000 },
+    { label: "2m", ms: 120000 },
+    { label: "5m", ms: 300000 }
+  ];
+
+  waitDurations.forEach(duration => {
+    const waitBtn = document.createElement("button");
+    waitBtn.textContent = duration.label;
+    waitBtn.style.cssText = `padding: 4px 8px; background-color: #6f42c1; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; flex-grow: 1;`;
+    waitBtn.onclick = () => insertQuickWait(duration.ms);
+    quickWaitButtons.appendChild(waitBtn);
+  });
+
+  quickWaitContainer.appendChild(quickWaitLabel);
+  quickWaitContainer.appendChild(quickWaitButtons);
+
+  // Image throttle skip controls (shown when image throttle is active)
+  const imageThrottleContainer = document.createElement("div");
+  imageThrottleContainer.id = "ext-image-throttle-container";
+  imageThrottleContainer.style.cssText = `margin-bottom: 8px; display: none; background: #fff3cd; padding: 6px; border-radius: 4px; border: 1px solid #ffeaa7;`;
+
+  const imageThrottleStatus = document.createElement("div");
+  imageThrottleStatus.id = "ext-image-throttle-status";
+  imageThrottleStatus.style.cssText = `font-size: 11px; color: #856404; margin-bottom: 4px; font-weight: bold;`;
+
+  const skipImageThrottleBtn = document.createElement("button");
+  skipImageThrottleBtn.id = "ext-skip-image-throttle";
+  skipImageThrottleBtn.textContent = "Skip Image Wait";
+  skipImageThrottleBtn.style.cssText = `padding: 4px 8px; background-color: #fd7e14; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; width: 100%;`;
+  skipImageThrottleBtn.onclick = skipImageThrottle;
+
+  imageThrottleContainer.appendChild(imageThrottleStatus);
+  imageThrottleContainer.appendChild(skipImageThrottleBtn);
+
   controlPanelElement.appendChild(progressStatusElement);
   controlPanelElement.appendChild(progressBarContainer);
   controlPanelElement.appendChild(navContainer);
+  controlPanelElement.appendChild(quickWaitContainer);
+  controlPanelElement.appendChild(imageThrottleContainer);
   controlPanelElement.appendChild(pendingCommandsListElement);
   controlPanelElement.appendChild(buttonContainer);
   document.body.appendChild(controlPanelElement);
@@ -377,6 +430,69 @@ function destroyControlPanel() {
     pauseResumeButton = null;
     stopButton = null;
     navContainer = null;
+  }
+}
+
+// Insert a quick wait at the current position
+async function insertQuickWait(durationMs) {
+  if (!isChainRunning) return;
+  
+  console.log(`Inserting ${durationMs}ms wait at current position`);
+  
+  // If we're currently executing a command or waiting for response, show a message
+  if (isCommandExecuting || isWaitingForResponse) {
+    console.log("Command in progress, quick wait will be inserted after current command completes");
+    showSleepIndicator(`Quick wait (${durationMs / 1000}s) queued after current command`, 2000);
+    
+    // Store the pending wait to be applied after current command
+    setTimeout(async () => {
+      if (isChainRunning && !isCommandExecuting && !isWaitingForResponse) {
+        const waitMsg = `Quick wait (${durationMs / 1000}s)`;
+        const wasAlreadyPaused = isPaused;
+        
+        if (!isPaused) {
+          await pauseSequence();
+        }
+        
+        await sleep(durationMs, waitMsg);
+        
+        if (!wasAlreadyPaused && isPaused) {
+          await resumeSequence();
+        }
+      }
+    }, 500); // Check again in 500ms
+    return;
+  }
+  
+  // Apply the wait immediately
+  const waitMsg = `Quick wait (${durationMs / 1000}s)`;
+  const wasAlreadyPaused = isPaused;
+  
+  if (!isPaused) {
+    await pauseSequence();
+  }
+  
+  await sleep(durationMs, waitMsg);
+  
+  if (!wasAlreadyPaused && isPaused) {
+    // Auto-resume if we paused it ourselves
+    await resumeSequence();
+  }
+}
+
+// Skip the current image throttle
+function skipImageThrottle() {
+  if (isImageThrottleActive) {
+    console.log("Skipping image throttle");
+    isImageThrottleActive = false;
+    imageThrottleEndTime = 0;
+    hideSleepIndicator();
+    updateControlPanel();
+    
+    // If we're not paused, continue processing
+    if (!isPaused && !isCommandExecuting && !isWaitingForResponse) {
+      processNextCommand();
+    }
   }
 }
 
@@ -559,10 +675,44 @@ function updateControlPanel() {
       li.innerHTML = `<span style="color: #6c757d; font-style: italic;">No commands in queue</span>`;
       li.style.fontSize = "12px";
       pendingCommandsListElement.appendChild(li);
-    }
-  }
+    }  }
 
   pauseResumeButton.textContent = isPaused ? "Resume" : "Pause";
+  // Show/hide quick wait controls
+  const quickWaitContainer = document.getElementById("ext-quick-wait-container");
+  if (quickWaitContainer) {
+    // Show quick wait controls when chain is running (paused or active)
+    quickWaitContainer.style.display = isChainRunning ? "block" : "none";
+  }
+    // Show/hide image throttle skip controls
+  const imageThrottleContainer = document.getElementById("ext-image-throttle-container");
+  const imageThrottleStatus = document.getElementById("ext-image-throttle-status");
+  if (imageThrottleContainer && imageThrottleStatus) {
+    if (isImageThrottleActive) {
+      const remainingTime = Math.max(0, imageThrottleEndTime - Date.now());
+      const remainingSeconds = Math.ceil(remainingTime / 1000);
+      
+      if (remainingTime > 0) {
+        imageThrottleStatus.textContent = `🖼️ Image throttle: ${remainingSeconds}s remaining`;
+        imageThrottleContainer.style.display = "block";
+        
+        // Schedule next update if still active
+        setTimeout(() => {
+          if (isImageThrottleActive) {
+            updateControlPanel();
+          }
+        }, 1000);
+      } else {
+        // Time expired, clear throttle state
+        isImageThrottleActive = false;
+        imageThrottleEndTime = 0;
+        imageThrottleContainer.style.display = "none";
+      }
+    } else {
+      imageThrottleContainer.style.display = "none";
+    }
+  }
+  
   controlPanelElement.style.display = isChainRunning ? "block" : "none";
 }
 
@@ -818,9 +968,7 @@ async function processNextCommand() {
 
         // Increment command index *after* successful execution and before delays for *this* command
         currentCommandIndex++;
-        updateControlPanel(); // Reflect that one more command is done
-
-        // 1. Image Generation Throttling
+        updateControlPanel(); // Reflect that one more command is done        // 1. Image Generation Throttling
         if (command.toLowerCase().includes("create image")) {
           imageCommandCounter++;
           console.log(`Image command count: ${imageCommandCounter}`);
@@ -828,10 +976,24 @@ async function processNextCommand() {
             imageCommandCounter > 0 &&
             imageCommandCounter % config.imageThrottleCount === 0
           ) {
+            // Set image throttle state
+            isImageThrottleActive = true;
+            imageThrottleStartTime = Date.now();
+            imageThrottleEndTime = imageThrottleStartTime + config.imageThrottleDelayMs;
+            
             const throttleMsg = `Image generation throttle (${
               config.imageThrottleDelayMs / 1000
             }s pause)`;
+            
+            updateControlPanel(); // Show image throttle controls
+            
             await sleep(config.imageThrottleDelayMs, throttleMsg);
+            
+            // Clear image throttle state after sleep completes
+            isImageThrottleActive = false;
+            imageThrottleEndTime = 0;
+            updateControlPanel(); // Hide image throttle controls
+            
             if (isPaused) {
               resolve();
               return;
@@ -895,9 +1057,35 @@ async function resumeSequence() {
     isPaused = false;
     console.log("Sequence resumed.");
     updateControlPanel();
+    
+    // Check if there's an active image throttle that needs to be honored
+    if (isImageThrottleActive) {
+      const remainingTime = Math.max(0, imageThrottleEndTime - Date.now());
+      if (remainingTime > 0) {
+        console.log(`Resuming with ${remainingTime}ms remaining on image throttle`);
+        const throttleMsg = `Image throttle resuming (${Math.ceil(remainingTime / 1000)}s remaining)`;
+        await sleep(remainingTime, throttleMsg);
+        
+        // Clear throttle state after completion
+        isImageThrottleActive = false;
+        imageThrottleEndTime = 0;
+        updateControlPanel();
+        
+        // Check if paused again during the throttle wait
+        if (isPaused) {
+          return;
+        }
+      } else {
+        // Throttle time has already passed, clear the state
+        isImageThrottleActive = false;
+        imageThrottleEndTime = 0;
+        updateControlPanel();
+      }
+    }
+    
     // If a sleep was active, its visual countdown will resume via its own interval logic.
     // Only kick off the processing loop if we're not already waiting for a response
-    if (!isWaitingForResponse && !isCommandExecuting) {
+    if (!isWaitingForResponse && !isCommandExecuting && !isPaused) {
       processNextCommand();
     }
   }
@@ -909,6 +1097,8 @@ async function stopSequence() {
   isPaused = false;
   isCommandExecuting = false; // Reset execution state
   isWaitingForResponse = false; // Reset waiting state
+  isImageThrottleActive = false; // Clear image throttle state
+  imageThrottleEndTime = 0;
   currentChain = null;
   // currentCommandIndex = 0; // Keep currentCommandIndex to show final progress if needed, or reset
   // totalCommandsInSequence = 0;
