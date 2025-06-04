@@ -327,6 +327,14 @@ function createControlPanel() {
   buttonContainer.style.gap = "10px";
   buttonContainer.style.marginBottom = "10px";
 
+  const pipButton = document.createElement("button");
+  pipButton.id = "ext-pip-button";
+  pipButton.textContent = "⧉";
+  pipButton.title = "Toggle Picture-in-Picture";
+  pipButton.style.cssText =
+    "padding: 6px 8px; background-color: #17a2b8; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 0;";
+  pipButton.onclick = () => togglePiP();
+
   pauseResumeButton = document.createElement("button");
   pauseResumeButton.id = "ext-pause-resume-button";
   pauseResumeButton.textContent = "Pause";
@@ -370,6 +378,7 @@ function createControlPanel() {
   navContainer.appendChild(forwardButton);
   buttonContainer.appendChild(pauseResumeButton);
   buttonContainer.appendChild(stopButton);
+  buttonContainer.appendChild(pipButton);
 
   // Quick wait insertion controls (shown when paused or running)
   const quickWaitContainer = document.createElement("div");
@@ -1502,10 +1511,14 @@ async function togglePiP() {
     return 'Failed to open PIP';
   }
 
-  pipWindow.document.body.style.margin = '0';
+  pipWindow.document.documentElement.style.cssText =
+    'width:100%;height:100%;margin:0;padding:0;overflow:hidden';
+  pipWindow.document.body.style.cssText =
+    'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
   const iframe = pipWindow.document.createElement('iframe');
   iframe.src = window.location.href;
-  iframe.style.cssText = 'width:100%;height:100%;border:none;';
+  iframe.style.cssText =
+    'position:absolute;inset:0;width:100%;height:100%;border:none;';
   pipWindow.document.body.appendChild(iframe);
 
   if (saved.pipLeft !== undefined && saved.pipTop !== undefined) {
