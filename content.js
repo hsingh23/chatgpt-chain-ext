@@ -1417,7 +1417,7 @@ loadConfig(); // Load config when script initially loads
 // Try to restore state after a brief delay to ensure page is loaded
 setTimeout(() => {
   restoreStateIfAvailable();
-}, 1000);
+}, 3500);
 
 // Monitor URL changes to update chat ID and save state
 let lastUrl = window.location.href;
