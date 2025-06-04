@@ -35,7 +35,55 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
       statusMessageDiv.style.display = "none";
     }, 3000);
-  } // Run migration first, then load data
+  }
+
+  // Parse command to extract special syntax (pause, wait/sleep commands)
+  function parseCommand(promptText) {
+    // Check for pause command first
+    const pauseRegex = /\$pause\$/i;
+    if (pauseRegex.test(promptText)) {
+      const command = promptText.replace(pauseRegex, "").trim();
+      return { command, isPauseCommand: true, delayMs: 0, isDelayCommand: false };
+    }
+
+    // Check for new wait syntax: $wait 30s$ or $wait 2m$
+    const waitTagRegex = /\$wait\s+(\d+)([sm])\$/i;
+    let delayMs = 0;
+    let command = promptText;
+    const waitMatch = promptText.match(waitTagRegex);
+
+    if (waitMatch) {
+      const duration = parseInt(waitMatch[1]);
+      const unit = waitMatch[2].toLowerCase();
+      if (unit === "s") {
+        delayMs = duration * 1000;
+      } else if (unit === "m") {
+        delayMs = duration * 60 * 1000;
+      }
+      command = promptText.replace(waitTagRegex, "").trim();
+      return { command, isPauseCommand: false, delayMs, isDelayCommand: true };
+    } else {
+      // Legacy support for old sleep syntax: $sleep30s$
+      const sleepTagRegex = /\$sleep(\d+)([sm])\$/i;
+      const sleepMatch = promptText.match(sleepTagRegex);
+
+      if (sleepMatch) {
+        const duration = parseInt(sleepMatch[1]);
+        const unit = sleepMatch[2].toLowerCase();
+        if (unit === "s") {
+          delayMs = duration * 1000;
+        } else if (unit === "m") {
+          delayMs = duration * 60 * 1000;
+        }
+        command = promptText.replace(sleepTagRegex, "").trim();
+        return { command, isPauseCommand: false, delayMs, isDelayCommand: true };
+      }
+    }
+
+    return { command, isPauseCommand: false, delayMs: 0, isDelayCommand: false };
+  }
+
+  // Run migration first, then load data
   migratePromptsToLocal();
 
   // Load saved prompts and settings (using different storage APIs)
@@ -210,12 +258,42 @@ document.addEventListener("DOMContentLoaded", function () {
           .split(/\n+/)
           .map((cmd) => cmd.trim())
           .filter((cmd) => cmd);
-      }
-      // Create a nicely formatted preview with numbered commands
+      }      // Create a nicely formatted preview with numbered commands
       const commandsHtml = commands
         .map((cmd, idx) => {
-          const shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + "..." : cmd;
-          return `<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 6px; border-left: 4px solid #007bff; line-height: 1;">
+          const parsedCmd = parseCommand(cmd);
+          let shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + "..." : cmd;
+          let statusIcon = "";
+          let statusText = "";
+          let borderColor = "#007bff";
+          
+          if (parsedCmd.isPauseCommand) {
+            statusIcon = "⏸️ ";
+            statusText = "PAUSE";
+            borderColor = "#ffc107";
+            if (parsedCmd.command.trim() === "") {
+              shortCmd = "[PAUSE COMMAND]";
+            } else {
+              shortCmd = parsedCmd.command.length > 50 ? parsedCmd.command.substring(0, 50) + "..." : parsedCmd.command;
+              shortCmd += " + PAUSE";
+            }
+          } else if (parsedCmd.isDelayCommand) {
+            const delayText = parsedCmd.delayMs >= 60000 ? 
+              `${Math.round(parsedCmd.delayMs / 60000)}m` : 
+              `${Math.round(parsedCmd.delayMs / 1000)}s`;
+            statusIcon = "⏱️ ";
+            statusText = `WAIT ${delayText}`;
+            borderColor = "#6f42c1";
+            if (parsedCmd.command.trim() === "") {
+              shortCmd = `[WAIT ${delayText}]`;
+            } else {
+              shortCmd = parsedCmd.command.length > 45 ? parsedCmd.command.substring(0, 45) + "..." : parsedCmd.command;
+              shortCmd += ` + WAIT ${delayText}`;
+            }
+          }
+          
+          return `<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 6px; border-left: 4px solid ${borderColor}; line-height: 1;">
+                    ${statusIcon ? `<div style="color: ${borderColor}; font-size: 11px; font-weight: bold; margin-bottom: 4px;">${statusText}</div>` : ""}
                     <span style="color: #333;">${shortCmd
                       .replace(/</g, "&lt;")
                       .replace(/>/g, "&gt;")}</span>
@@ -234,11 +312,32 @@ document.addEventListener("DOMContentLoaded", function () {
                         ${commandsHtml}
                     </div>                    <div class="button-group">
                         <div class="start-position-selector">
-                            <label for="start-position-${index}">Start from:</label>
-                            <select class="start-position-select" id="start-position-${index}">
+                            <label for="start-position-${index}">Start from:</label>                            <select class="start-position-select" id="start-position-${index}">
                                 ${commands.map((cmd, cmdIdx) => {
-                                    const shortCmd = cmd.length > 35 ? cmd.substring(0, 35) + "..." : cmd;
-                                    return `<option value="${cmdIdx}">Step ${cmdIdx + 1}: ${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</option>`;
+                                    const parsedCmd = parseCommand(cmd);
+                                    let shortCmd = cmd.length > 35 ? cmd.substring(0, 35) + "..." : cmd;
+                                    let prefix = "";
+                                    
+                                    if (parsedCmd.isPauseCommand) {
+                                        prefix = "⏸️ ";
+                                        if (parsedCmd.command.trim() === "") {
+                                            shortCmd = "[PAUSE]";
+                                        } else {
+                                            shortCmd = parsedCmd.command.length > 25 ? parsedCmd.command.substring(0, 25) + "..." : parsedCmd.command;
+                                        }
+                                    } else if (parsedCmd.isDelayCommand) {
+                                        const delayText = parsedCmd.delayMs >= 60000 ? 
+                                            `${Math.round(parsedCmd.delayMs / 60000)}m` : 
+                                            `${Math.round(parsedCmd.delayMs / 1000)}s`;
+                                        prefix = `⏱️ `;
+                                        if (parsedCmd.command.trim() === "") {
+                                            shortCmd = `[WAIT ${delayText}]`;
+                                        } else {
+                                            shortCmd = parsedCmd.command.length > 20 ? parsedCmd.command.substring(0, 20) + "..." : parsedCmd.command;
+                                        }
+                                    }
+                                    
+                                    return `<option value="${cmdIdx}">Step ${cmdIdx + 1}: ${prefix}${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</option>`;
                                 }).join('')}
                             </select>
                         </div>
@@ -534,28 +633,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Add storage info to the popup
   addStorageInfo();
-
-  // Add page status check
-  function checkPageStatus() {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const statusDiv = document.getElementById('page-status');
-      if (tabs[0] && tabs[0].url) {
-        if (tabs[0].url.includes('chatgpt.com')) {
-          statusDiv.textContent = '✅ ChatGPT page detected';
-          statusDiv.className = 'page-status-success';
-        } else {
-          statusDiv.textContent = '⚠️ Navigate to ChatGPT to use this extension';
-          statusDiv.className = 'page-status-warning';
-        }
-      } else {
-        statusDiv.textContent = '❌ Could not detect current page';
-        statusDiv.className = 'page-status-error';
-      }
-    });
-  }
-
-  // Check page status when popup opens
-  checkPageStatus();
 
   // Function to ensure content script is loaded
   function ensureContentScript(tabId, callback) {

@@ -6,12 +6,12 @@
       "js": [ "content.js" ],
       "matches": [ "https://chatgpt.com/*" ]
    } ],
-   "description": "Free and unlimited prompt chains for ChatGPT. Save, edit, and automatically queue prompts with custom separators.",
+   "description": "Automate ChatGPT conversations with intelligent prompt chains. Create, save, and execute multi-step workflows with custom starting positions, real-time progress tracking, and advanced controls. Perfect for content creation, research, and repetitive AI tasks.",
    "icons": {
-      "128": "Logo.png"
+      "128": "chains.png"
    },
    "manifest_version": 3,
-   "name": "ChatGPT Chain Prompts - Free Automated Message Queue",
+   "name": "Chains - ChatGPT Workflow Automation - Smart Prompting",
    "permissions": [ "storage", "activeTab", "scripting" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
    "version": "1.1"
