@@ -1494,10 +1494,19 @@ loadConfig(); // Load config when script initially loads
 // or when a chain starts, or when config is updated.
 
 // --- State Restoration ---
-// Try to restore state after a brief delay to ensure page is loaded
-setTimeout(() => {
-  restoreStateIfAvailable();
-}, 3500);
+// Wait for user messages to load before attempting state restore
+function attemptRestoreState(retries = 10) {
+  const userMsgs = document.querySelectorAll('[data-message-author-role="user"]');
+  if (userMsgs.length > 0 || retries <= 0) {
+    restoreStateIfAvailable();
+  } else {
+    setTimeout(() => attemptRestoreState(retries - 1), 1000);
+  }
+}
+
+// Start initial state restoration attempt
+attemptRestoreState();
+
 
 // Monitor URL changes to update chat ID and save state
 let lastUrl = window.location.href;
