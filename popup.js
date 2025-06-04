@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "enableFloatingProgress"
   );
   const saveSettingsButton = document.getElementById("save-settings");
+  const openPipButton = document.getElementById("open-pip-view");
 
   function showStatus(message, isError = false) {
     statusMessageDiv.textContent = message;
@@ -541,6 +542,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Optionally re-render or reset textarea to original value if needed
       });
     });
+
   }
 
   // Migration function to move prompts from sync to local storage
@@ -633,6 +635,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Add storage info to the popup
   addStorageInfo();
+
+  if (openPipButton) {
+    openPipButton.addEventListener("click", function () {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        if (tabs[0] && tabs[0].id) {
+          if (!tabs[0].url || !tabs[0].url.includes('chatgpt.com')) {
+            showStatus(
+              "Please navigate to ChatGPT (https://chatgpt.com) to use this extension.",
+              true
+            );
+            return;
+          }
+          ensureContentScript(tabs[0].id, (loaded) => {
+            if (!loaded) {
+              showStatus(
+                "Failed to load extension on this page. Please refresh and try again.",
+                true
+              );
+              return;
+            }
+            chrome.tabs.sendMessage(
+              tabs[0].id,
+              { action: "togglePip" },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  showStatus(
+                    "Failed to toggle PIP: " + chrome.runtime.lastError.message,
+                    true
+                  );
+                } else if (response && response.status) {
+                  showStatus(response.status);
+                  window.close();
+                }
+              }
+            );
+          });
+        }
+      });
+    });
+  }
 
   // Function to ensure content script is loaded
   function ensureContentScript(tabId, callback) {
