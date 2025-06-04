@@ -44,7 +44,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const pauseRegex = /\$pause\$/i;
     if (pauseRegex.test(promptText)) {
       const command = promptText.replace(pauseRegex, "").trim();
-      return { command, isPauseCommand: true, delayMs: 0, isDelayCommand: false };
+      return {
+        command,
+        isPauseCommand: true,
+        delayMs: 0,
+        isDelayCommand: false,
+      };
     }
 
     // Check for new wait syntax: $wait 30s$ or $wait 2m$
@@ -77,11 +82,21 @@ document.addEventListener("DOMContentLoaded", function () {
           delayMs = duration * 60 * 1000;
         }
         command = promptText.replace(sleepTagRegex, "").trim();
-        return { command, isPauseCommand: false, delayMs, isDelayCommand: true };
+        return {
+          command,
+          isPauseCommand: false,
+          delayMs,
+          isDelayCommand: true,
+        };
       }
     }
 
-    return { command, isPauseCommand: false, delayMs: 0, isDelayCommand: false };
+    return {
+      command,
+      isPauseCommand: false,
+      delayMs: 0,
+      isDelayCommand: false,
+    };
   }
 
   // Run migration first, then load data
@@ -259,7 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
           .split(/\n+/)
           .map((cmd) => cmd.trim())
           .filter((cmd) => cmd);
-      }      // Create a nicely formatted preview with numbered commands
+      } // Create a nicely formatted preview with numbered commands
       const commandsHtml = commands
         .map((cmd, idx) => {
           const parsedCmd = parseCommand(cmd);
@@ -267,7 +282,7 @@ document.addEventListener("DOMContentLoaded", function () {
           let statusIcon = "";
           let statusText = "";
           let borderColor = "#007bff";
-          
+
           if (parsedCmd.isPauseCommand) {
             statusIcon = "⏸️ ";
             statusText = "PAUSE";
@@ -275,26 +290,37 @@ document.addEventListener("DOMContentLoaded", function () {
             if (parsedCmd.command.trim() === "") {
               shortCmd = "[PAUSE COMMAND]";
             } else {
-              shortCmd = parsedCmd.command.length > 50 ? parsedCmd.command.substring(0, 50) + "..." : parsedCmd.command;
+              shortCmd =
+                parsedCmd.command.length > 50
+                  ? parsedCmd.command.substring(0, 50) + "..."
+                  : parsedCmd.command;
               shortCmd += " + PAUSE";
             }
           } else if (parsedCmd.isDelayCommand) {
-            const delayText = parsedCmd.delayMs >= 60000 ? 
-              `${Math.round(parsedCmd.delayMs / 60000)}m` : 
-              `${Math.round(parsedCmd.delayMs / 1000)}s`;
+            const delayText =
+              parsedCmd.delayMs >= 60000
+                ? `${Math.round(parsedCmd.delayMs / 60000)}m`
+                : `${Math.round(parsedCmd.delayMs / 1000)}s`;
             statusIcon = "⏱️ ";
             statusText = `WAIT ${delayText}`;
             borderColor = "#6f42c1";
             if (parsedCmd.command.trim() === "") {
               shortCmd = `[WAIT ${delayText}]`;
             } else {
-              shortCmd = parsedCmd.command.length > 45 ? parsedCmd.command.substring(0, 45) + "..." : parsedCmd.command;
+              shortCmd =
+                parsedCmd.command.length > 45
+                  ? parsedCmd.command.substring(0, 45) + "..."
+                  : parsedCmd.command;
               shortCmd += ` + WAIT ${delayText}`;
             }
           }
-          
+
           return `<div style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 6px; border-left: 4px solid ${borderColor}; line-height: 1;">
-                    ${statusIcon ? `<div style="color: ${borderColor}; font-size: 11px; font-weight: bold; margin-bottom: 4px;">${statusText}</div>` : ""}
+                    ${
+                      statusIcon
+                        ? `<div style="color: ${borderColor}; font-size: 11px; font-weight: bold; margin-bottom: 4px;">${statusText}</div>`
+                        : ""
+                    }
                     <span style="color: #333;">${shortCmd
                       .replace(/</g, "&lt;")
                       .replace(/>/g, "&gt;")}</span>
@@ -314,32 +340,58 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>                    <div class="button-group">
                         <div class="start-position-selector">
                             <label for="start-position-${index}">Start from:</label>                            <select class="start-position-select" id="start-position-${index}">
-                                ${commands.map((cmd, cmdIdx) => {
+                                ${commands
+                                  .map((cmd, cmdIdx) => {
                                     const parsedCmd = parseCommand(cmd);
-                                    let shortCmd = cmd.length > 35 ? cmd.substring(0, 35) + "..." : cmd;
+                                    let shortCmd =
+                                      cmd.length > 35
+                                        ? cmd.substring(0, 35) + "..."
+                                        : cmd;
                                     let prefix = "";
-                                    
+
                                     if (parsedCmd.isPauseCommand) {
-                                        prefix = "⏸️ ";
-                                        if (parsedCmd.command.trim() === "") {
-                                            shortCmd = "[PAUSE]";
-                                        } else {
-                                            shortCmd = parsedCmd.command.length > 25 ? parsedCmd.command.substring(0, 25) + "..." : parsedCmd.command;
-                                        }
+                                      prefix = "⏸️ ";
+                                      if (parsedCmd.command.trim() === "") {
+                                        shortCmd = "[PAUSE]";
+                                      } else {
+                                        shortCmd =
+                                          parsedCmd.command.length > 25
+                                            ? parsedCmd.command.substring(
+                                                0,
+                                                25
+                                              ) + "..."
+                                            : parsedCmd.command;
+                                      }
                                     } else if (parsedCmd.isDelayCommand) {
-                                        const delayText = parsedCmd.delayMs >= 60000 ? 
-                                            `${Math.round(parsedCmd.delayMs / 60000)}m` : 
-                                            `${Math.round(parsedCmd.delayMs / 1000)}s`;
-                                        prefix = `⏱️ `;
-                                        if (parsedCmd.command.trim() === "") {
-                                            shortCmd = `[WAIT ${delayText}]`;
-                                        } else {
-                                            shortCmd = parsedCmd.command.length > 20 ? parsedCmd.command.substring(0, 20) + "..." : parsedCmd.command;
-                                        }
+                                      const delayText =
+                                        parsedCmd.delayMs >= 60000
+                                          ? `${Math.round(
+                                              parsedCmd.delayMs / 60000
+                                            )}m`
+                                          : `${Math.round(
+                                              parsedCmd.delayMs / 1000
+                                            )}s`;
+                                      prefix = `⏱️ `;
+                                      if (parsedCmd.command.trim() === "") {
+                                        shortCmd = `[WAIT ${delayText}]`;
+                                      } else {
+                                        shortCmd =
+                                          parsedCmd.command.length > 20
+                                            ? parsedCmd.command.substring(
+                                                0,
+                                                20
+                                              ) + "..."
+                                            : parsedCmd.command;
+                                      }
                                     }
-                                    
-                                    return `<option value="${cmdIdx}">Step ${cmdIdx + 1}: ${prefix}${shortCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</option>`;
-                                }).join('')}
+
+                                    return `<option value="${cmdIdx}">Step ${
+                                      cmdIdx + 1
+                                    }: ${prefix}${shortCmd
+                                      .replace(/</g, "&lt;")
+                                      .replace(/>/g, "&gt;")}</option>`;
+                                  })
+                                  .join("")}
                             </select>
                         </div>
                         <div style="display: flex; gap: 5px;">
@@ -361,20 +413,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
             `;
       promptsListDiv.appendChild(div);
-    });    // Add event listeners for action buttons
+    }); // Add event listeners for action buttons
     document.querySelectorAll(".use-prompt").forEach((button) => {
       button.addEventListener("click", function () {
         const prompt = this.getAttribute("data-prompt");
         const chainIndex = this.getAttribute("data-index");
-        const startPositionSelect = document.getElementById(`start-position-${chainIndex}`);
-        const startPosition = startPositionSelect ? parseInt(startPositionSelect.value) : 0;
-        
+        const startPositionSelect = document.getElementById(
+          `start-position-${chainIndex}`
+        );
+        const startPosition = startPositionSelect
+          ? parseInt(startPositionSelect.value)
+          : 0;
+
         const currentSeparator =
-          separatorInput.value || defaultSettings.separator;        chrome.tabs.query(
+          separatorInput.value || defaultSettings.separator;
+        chrome.tabs.query(
           { active: true, currentWindow: true },
           function (tabs) {
-            if (tabs[0] && tabs[0].id) {              // Check if we're on a ChatGPT page
-              if (!tabs[0].url || !tabs[0].url.includes('chatgpt.com')) {
+            if (tabs[0] && tabs[0].id) {
+              // Check if we're on a ChatGPT page
+              if (!tabs[0].url || !tabs[0].url.includes("chatgpt.com")) {
                 showStatus(
                   "Please navigate to ChatGPT (https://chatgpt.com) to use this extension.",
                   true
@@ -406,20 +464,30 @@ document.addEventListener("DOMContentLoaded", function () {
                         "Error sending message to content script:",
                         chrome.runtime.lastError.message
                       );
-                      
+
                       // Provide more helpful error messages
                       let errorMessage = "Failed to start chain. ";
-                      if (chrome.runtime.lastError.message.includes("Receiving end does not exist")) {
-                        errorMessage += "Please refresh the ChatGPT page and try again.";
+                      if (
+                        chrome.runtime.lastError.message.includes(
+                          "Receiving end does not exist"
+                        )
+                      ) {
+                        errorMessage +=
+                          "Please refresh the ChatGPT page and try again.";
                       } else {
                         errorMessage += chrome.runtime.lastError.message;
                       }
-                      
+
                       showStatus(errorMessage, true);
                     } else if (response) {
                       if (response.status === "started") {
-                        const startInfo = startPosition > 0 ? ` (starting from step ${startPosition + 1})` : '';
-                        showStatus(`Chain started: ${response.message}${startInfo}`);
+                        const startInfo =
+                          startPosition > 0
+                            ? ` (starting from step ${startPosition + 1})`
+                            : "";
+                        showStatus(
+                          `Chain started: ${response.message}${startInfo}`
+                        );
                         window.close(); // Close popup after successfully starting
                       } else {
                         showStatus(
@@ -542,7 +610,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // Optionally re-render or reset textarea to original value if needed
       });
     });
-
   }
 
   // Migration function to move prompts from sync to local storage
@@ -637,7 +704,7 @@ document.addEventListener("DOMContentLoaded", function () {
     openPipButton.addEventListener("click", function () {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0] && tabs[0].id) {
-          if (!tabs[0].url || !tabs[0].url.includes('chatgpt.com')) {
+          if (!tabs[0].url || !tabs[0].url.includes("chatgpt.com")) {
             showStatus(
               "Please navigate to ChatGPT (https://chatgpt.com) to use this extension.",
               true
@@ -682,11 +749,14 @@ document.addEventListener("DOMContentLoaded", function () {
         chrome.scripting.executeScript(
           {
             target: { tabId: tabId },
-            files: ['content.js']
+            files: ["content.js"],
           },
           () => {
             if (chrome.runtime.lastError) {
-              console.error("Failed to inject content script:", chrome.runtime.lastError);
+              console.error(
+                "Failed to inject content script:",
+                chrome.runtime.lastError
+              );
               callback(false);
             } else {
               console.log("Content script injected successfully");
