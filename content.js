@@ -39,6 +39,9 @@ let pendingCommandsListElement = null;
 let pauseResumeButton = null;
 let stopButton = null;
 let navContainer = null;
+// Document Picture-in-Picture window and monitor
+let pipWindow = null;
+let pipMonitorInterval = null;
 
 // --- Default settings (used if storage is not available or first run) ---
 const C_DEFAULT_SETTINGS = {
@@ -1197,17 +1200,19 @@ function getCurrentChatId() {
 // Save current state to localStorage for this chat
 function saveChatState() {
   if (!currentChatId) return;
-  
+
+  const prev = chatStates[currentChatId] || {};
   const state = {
+    ...prev,
     chain: currentChain,
     isRunning: isChainRunning,
     isPaused: isPaused,
     currentIndex: currentCommandIndex,
     totalCommands: totalCommandsInSequence,
     imageCounter: imageCommandCounter,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
-  
+
   chatStates[currentChatId] = state;
   localStorage.setItem('chatgpt-chain-states', JSON.stringify(chatStates));
   console.log(`Saved state for chat ${currentChatId}:`, state);
@@ -1376,6 +1381,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       });
     }
     return true;
+  } else if (request.action === "togglePip") {
+    togglePiP().then((status) => sendResponse({ status }));
+    return true;
   } else if (request.action === "updateConfig") {
     console.log("Received config update from popup:", request.newConfig);
     config = { ...config, ...request.newConfig };
@@ -1453,4 +1461,69 @@ async function retryLastPrompt() {
     console.error("Failed to retry last prompt:", error);
     throw error;
   }
+}
+
+// --- Picture-in-Picture Support ---
+function savePipWindowState() {
+  if (!pipWindow || pipWindow.closed || !currentChatId) return;
+  const state = chatStates[currentChatId] || {};
+  state.pipWidth = pipWindow.outerWidth;
+  state.pipHeight = pipWindow.outerHeight;
+  state.pipLeft = pipWindow.screenX;
+  state.pipTop = pipWindow.screenY;
+  chatStates[currentChatId] = state;
+  localStorage.setItem('chatgpt-chain-states', JSON.stringify(chatStates));
+}
+
+async function togglePiP() {
+  if (!('documentPictureInPicture' in window)) {
+    console.warn('Document Picture-in-Picture not supported');
+    return 'PIP not supported';
+  }
+
+  if (pipWindow && !pipWindow.closed) {
+    savePipWindowState();
+    pipWindow.close();
+    clearInterval(pipMonitorInterval);
+    pipMonitorInterval = null;
+    pipWindow = null;
+    return 'PIP closed';
+  }
+
+  currentChatId = getCurrentChatId();
+  const saved = chatStates[currentChatId] || {};
+  try {
+    pipWindow = await documentPictureInPicture.requestWindow({
+      width: saved.pipWidth || 600,
+      height: saved.pipHeight || 400,
+    });
+  } catch (e) {
+    console.error('Failed to open PIP window', e);
+    return 'Failed to open PIP';
+  }
+
+  pipWindow.document.body.style.margin = '0';
+  const iframe = pipWindow.document.createElement('iframe');
+  iframe.src = window.location.href;
+  iframe.style.cssText = 'width:100%;height:100%;border:none;';
+  pipWindow.document.body.appendChild(iframe);
+
+  if (saved.pipLeft !== undefined && saved.pipTop !== undefined) {
+    try {
+      pipWindow.moveTo(saved.pipLeft, saved.pipTop);
+    } catch (e) {
+      // moveTo may fail in some browsers
+    }
+  }
+
+  pipWindow.addEventListener('resize', savePipWindowState);
+  pipWindow.addEventListener('pagehide', () => {
+    savePipWindowState();
+    pipWindow = null;
+    if (pipMonitorInterval) clearInterval(pipMonitorInterval);
+    pipMonitorInterval = null;
+  });
+  pipMonitorInterval = setInterval(savePipWindowState, 1000);
+  savePipWindowState();
+  return 'PIP opened';
 }
