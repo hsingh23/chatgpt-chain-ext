@@ -21,6 +21,11 @@ let isImageThrottleActive = false; // Track if image throttle is currently activ
 let imageThrottleStartTime = 0; // When the image throttle started
 let imageThrottleEndTime = 0; // When the image throttle will end
 
+// --- State Persistence Variables ---
+let currentChatId = null; // Current chat ID extracted from URL
+let chatStates = {}; // Store state per chat ID
+let lastSubmittedPrompt = null; // Store the last prompt for retry functionality
+
 // --- DOM Elements for UI ---
 let sleepIndicatorElement = null;
 let sleepIndicatorMessageElement = null;
@@ -340,22 +345,22 @@ function createControlPanel() {
   const backButton = document.createElement("button");
   backButton.id = "ext-back-button";
   backButton.textContent = "← Back";
-  backButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
-  backButton.onclick = () => {
+  backButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;  backButton.onclick = () => {
     if (isPaused && currentCommandIndex > 0) {
       currentCommandIndex--;
       updateControlPanel();
+      saveChatState(); // Save state when navigating
     }
   };
 
   const forwardButton = document.createElement("button");
   forwardButton.id = "ext-forward-button";
   forwardButton.textContent = "Forward →";
-  forwardButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
-  forwardButton.onclick = () => {
+  forwardButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;  forwardButton.onclick = () => {
     if (isPaused && currentCommandIndex < totalCommandsInSequence - 1) {
       currentCommandIndex++;
       updateControlPanel();
+      saveChatState(); // Save state when navigating
     }
   };
   navContainer.appendChild(backButton);
@@ -765,6 +770,9 @@ async function submitPrompt(prompt) {
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
   textarea.dispatchEvent(new Event("change", { bubbles: true })); // Good practice
 
+  // Store the last submitted prompt for retry functionality
+  lastSubmittedPrompt = prompt;
+
   return new Promise((resolve, reject) => {
     let attempts = 0;
     const maxAttempts = 30; // Try for 6 seconds (30 * 200ms)
@@ -774,29 +782,78 @@ async function submitPrompt(prompt) {
         console.log("Submit attempt paused.");
         return;
       }
+      
       const button = document.querySelector(
         'button[aria-label="Send prompt"][data-testid="send-button"]'
       );
+      
       if (button && !button.disabled) {
         clearInterval(tryClick);
         button.click();
         console.log("Prompt submitted:", prompt.substring(0, 50) + "...");
         resolve();
       } else if (attempts >= maxAttempts) {
-        clearInterval(tryClick);
-        console.error(
-          "Failed to submit prompt: Send button not available/enabled after max attempts. Stopping sequence."
-        );
-        await stopSequence();
-        reject(new Error("Send button timeout or not found"));
+        // Check for retry button before giving up
+        const retryButton = document.querySelector('button[data-testid="regenerate-thread-error-button"]');
+        if (retryButton) {
+          console.log("Send button timeout, but retry button found. Clicking retry...");
+          clearInterval(tryClick);
+          retryButton.click();
+          
+          // Wait a bit and try to submit again
+          setTimeout(() => {
+            const newButton = document.querySelector(
+              'button[aria-label="Send prompt"][data-testid="send-button"]'
+            );
+            if (newButton && !newButton.disabled) {
+              newButton.click();
+              console.log("Prompt resubmitted after retry:", prompt.substring(0, 50) + "...");
+              resolve();
+            } else {
+              console.error("Failed to submit prompt even after retry.");
+              stopSequence();
+              reject(new Error("Send button timeout after retry"));
+            }
+          }, 1000);
+        } else {
+          clearInterval(tryClick);
+          console.error(
+            "Failed to submit prompt: Send button not available/enabled after max attempts and no retry button found. Stopping sequence."
+          );
+          await stopSequence();
+          reject(new Error("Send button timeout or not found"));
+        }
       } else if (!button && attempts > 5) {
-        // If button disappears after initial checks
-        clearInterval(tryClick);
-        console.error(
-          "Failed to submit prompt: Send button disappeared. Stopping sequence."
-        );
-        await stopSequence();
-        reject(new Error("Send button disappeared"));
+        // If button disappears after initial checks, look for retry button
+        const retryButton = document.querySelector('button[data-testid="regenerate-thread-error-button"]');
+        if (retryButton) {
+          console.log("Send button disappeared, but retry button found. Clicking retry...");
+          clearInterval(tryClick);
+          retryButton.click();
+          
+          // Wait a bit and try to submit again
+          setTimeout(() => {
+            const newButton = document.querySelector(
+              'button[aria-label="Send prompt"][data-testid="send-button"]'
+            );
+            if (newButton && !newButton.disabled) {
+              newButton.click();
+              console.log("Prompt resubmitted after retry:", prompt.substring(0, 50) + "...");
+              resolve();
+            } else {
+              console.error("Failed to submit prompt even after retry.");
+              stopSequence();
+              reject(new Error("Send button disappeared and retry failed"));
+            }
+          }, 1000);
+        } else {
+          clearInterval(tryClick);
+          console.error(
+            "Failed to submit prompt: Send button disappeared and no retry button found. Stopping sequence."
+          );
+          await stopSequence();
+          reject(new Error("Send button disappeared"));
+        }
       }
       attempts++;
     }, 200);
@@ -917,13 +974,13 @@ async function processNextCommand() {
         return;
       }
     }
-    
-    // Move to next command index after executing the command (if any)
+      // Move to next command index after executing the command (if any)
     currentCommandIndex++;
     
     // Now pause the sequence
     isPaused = true;
     console.log("Sequence automatically paused due to $pause$ command.");
+    saveChatState(); // Save state after pause command
     updateControlPanel();
     
     return; // Stop execution here until manually resumed
@@ -964,11 +1021,10 @@ async function processNextCommand() {
         isWaitingForResponse = false; // Response received
         console.log(
           `ChatGPT response complete for: "${command.substring(0, 50)}..."`
-        );
-
-        // Increment command index *after* successful execution and before delays for *this* command
+        );        // Increment command index *after* successful execution and before delays for *this* command
         currentCommandIndex++;
-        updateControlPanel(); // Reflect that one more command is done        // 1. Image Generation Throttling
+        saveChatState(); // Save state after command completion
+        updateControlPanel(); // Reflect that one more command is done// 1. Image Generation Throttling
         if (command.toLowerCase().includes("create image")) {
           imageCommandCounter++;
           console.log(`Image command count: ${imageCommandCounter}`);
@@ -1040,6 +1096,7 @@ async function pauseSequence() {
   if (isChainRunning && !isPaused) {
     isPaused = true;
     console.log("Sequence paused.");
+    saveChatState(); // Save state when paused
     if (sleepCountdownInterval) {
       // If a sleep was active, ensure its visual countdown pauses
       // The showSleepIndicator logic will handle the text update
@@ -1056,6 +1113,7 @@ async function resumeSequence() {
   if (isChainRunning && isPaused) {
     isPaused = false;
     console.log("Sequence resumed.");
+    saveChatState(); // Save state when resumed
     updateControlPanel();
     
     // Check if there's an active image throttle that needs to be honored
@@ -1100,6 +1158,14 @@ async function stopSequence() {
   isImageThrottleActive = false; // Clear image throttle state
   imageThrottleEndTime = 0;
   currentChain = null;
+  
+  // Clear saved state for this chat
+  if (currentChatId && chatStates[currentChatId]) {
+    delete chatStates[currentChatId];
+    localStorage.setItem('chatgpt-chain-states', JSON.stringify(chatStates));
+    console.log(`Cleared state for chat ${currentChatId}`);
+  }
+  
   // currentCommandIndex = 0; // Keep currentCommandIndex to show final progress if needed, or reset
   // totalCommandsInSequence = 0;
   imageCommandCounter = 0;
@@ -1117,6 +1183,124 @@ async function stopSequence() {
   }
 
   console.log("Sequence has been stopped.");
+}
+
+// --- State Persistence Functions ---
+
+// Extract chat ID from current URL
+function getCurrentChatId() {
+  const url = window.location.href;
+  const chatMatch = url.match(/\/c\/([a-f0-9-]+)/);
+  return chatMatch ? chatMatch[1] : null;
+}
+
+// Save current state to localStorage for this chat
+function saveChatState() {
+  if (!currentChatId) return;
+  
+  const state = {
+    chain: currentChain,
+    isRunning: isChainRunning,
+    isPaused: isPaused,
+    currentIndex: currentCommandIndex,
+    totalCommands: totalCommandsInSequence,
+    imageCounter: imageCommandCounter,
+    timestamp: Date.now()
+  };
+  
+  chatStates[currentChatId] = state;
+  localStorage.setItem('chatgpt-chain-states', JSON.stringify(chatStates));
+  console.log(`Saved state for chat ${currentChatId}:`, state);
+}
+
+// Load state from localStorage for current chat
+function loadChatState() {
+  const stored = localStorage.getItem('chatgpt-chain-states');
+  if (stored) {
+    chatStates = JSON.parse(stored);
+  }
+  
+  if (!currentChatId || !chatStates[currentChatId]) return null;
+  
+  const state = chatStates[currentChatId];
+  console.log(`Loading state for chat ${currentChatId}:`, state);
+  return state;
+}
+
+// Get all submitted user prompts from the current chat
+function getSubmittedPrompts() {
+  const userMessages = document.querySelectorAll('[data-message-author-role="user"]');
+  return Array.from(userMessages).map(msg => msg.textContent.trim());
+}
+
+// Find the current position in chain based on submitted prompts
+function findChainPosition(chain, submittedPrompts) {
+  if (!chain || !submittedPrompts || submittedPrompts.length === 0) {
+    return 0;
+  }
+  
+  // Start from the last submitted prompt and work backwards
+  for (let i = submittedPrompts.length - 1; i >= 0; i--) {
+    const submittedPrompt = submittedPrompts[i];
+    
+    // Check each command in the chain to see if it matches
+    for (let j = 0; j < chain.length; j++) {
+      const { command } = parseCommand(chain[j]);
+      
+      // Check if the submitted prompt matches this command (allowing for minor differences)
+      if (command.trim() && submittedPrompt.includes(command.trim().substring(0, 50))) {
+        console.log(`Found matching command at position ${j}: "${command.substring(0, 50)}..."`);
+        return j + 1; // Return the next position to execute
+      }
+    }
+  }
+  
+  return 0; // Start from beginning if no matches found
+}
+
+// Restore state for current chat if available
+function restoreStateIfAvailable() {
+  currentChatId = getCurrentChatId();
+  if (!currentChatId) return;
+  
+  const state = loadChatState();
+  if (!state || !state.isRunning) return;
+  
+  // Check if the state is recent (within last 24 hours)
+  const hoursSinceLastUpdate = (Date.now() - state.timestamp) / (1000 * 60 * 60);
+  if (hoursSinceLastUpdate > 24) {
+    console.log('State is too old, not restoring');
+    return;
+  }
+  
+  // Get submitted prompts to verify current position
+  const submittedPrompts = getSubmittedPrompts();
+  const actualPosition = findChainPosition(state.chain, submittedPrompts);
+  
+  // Only restore if we haven't completed the chain
+  if (actualPosition < state.chain.length) {
+    currentChain = state.chain;
+    isChainRunning = state.isRunning;
+    isPaused = state.isPaused;
+    currentCommandIndex = actualPosition;
+    totalCommandsInSequence = state.chain.length;
+    imageCommandCounter = state.imageCounter;
+    
+    console.log(`Restored state: position ${actualPosition}/${totalCommandsInSequence}, paused: ${isPaused}`);
+    
+    // Show control panel if chain is active
+    if (config.enableFloatingProgress) {
+      createControlPanel();
+      updateControlPanel();
+    }
+    
+    // Resume if not paused
+    if (!isPaused) {
+      processNextCommand();
+    }
+  } else {
+    console.log('Chain appears to be completed, not restoring');
+  }
 }
 
 // --- Message Listener ---
@@ -1152,9 +1336,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         .split(separator)
         .map((p) => p.trim())
         .filter((p) => p);
-    }
-
-    if (currentChain && currentChain.length > 0) {
+    }    if (currentChain && currentChain.length > 0) {
       isChainRunning = true;
       isPaused = false;
       
@@ -1164,6 +1346,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       
       totalCommandsInSequence = currentChain.length;
       imageCommandCounter = 0;
+
+      // Update chat ID and save initial state
+      currentChatId = getCurrentChatId();
+      if (currentChatId) {
+        saveChatState();
+      }
 
       if (pauseResumeButton) pauseResumeButton.disabled = false;
       if (stopButton) stopButton.disabled = false;
@@ -1208,4 +1396,61 @@ loadConfig(); // Load config when script initially loads
 // Initial creation of UI elements will happen if enabled in config,
 // or when a chain starts, or when config is updated.
 
+// --- State Restoration ---
+// Try to restore state after a brief delay to ensure page is loaded
+setTimeout(() => {
+  restoreStateIfAvailable();
+}, 1000);
+
+// Monitor URL changes to update chat ID and save state
+let lastUrl = window.location.href;
+setInterval(() => {
+  const currentUrl = window.location.href;
+  if (currentUrl !== lastUrl) {
+    console.log('URL changed, updating chat ID');
+    const newChatId = getCurrentChatId();
+    
+    // If chat ID changed and we have an active chain, save state to old ID and update to new ID
+    if (currentChatId !== newChatId) {
+      if (currentChatId && isChainRunning) {
+        saveChatState(); // Save state to old chat ID
+      }
+      currentChatId = newChatId;
+      if (currentChatId && isChainRunning) {
+        saveChatState(); // Save state to new chat ID
+      }
+    }
+    
+    lastUrl = currentUrl;
+  }
+}, 1000);
+
 console.log("ChatGPT Chain Extension content script v2 loaded.");
+
+// Retry the last submitted prompt (useful for error recovery)
+async function retryLastPrompt() {
+  if (!lastSubmittedPrompt) {
+    console.log("No prompt to retry");
+    return;
+  }
+  
+  console.log("Retrying last prompt:", lastSubmittedPrompt.substring(0, 50) + "...");
+  
+  // Look for retry button first
+  const retryButton = document.querySelector('button[data-testid="regenerate-thread-error-button"]');
+  if (retryButton) {
+    retryButton.click();
+    console.log("Clicked retry button");
+    
+    // Wait a moment for the page to reset
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  // Submit the last prompt again
+  try {
+    await submitPrompt(lastSubmittedPrompt);
+  } catch (error) {
+    console.error("Failed to retry last prompt:", error);
+    throw error;
+  }
+}

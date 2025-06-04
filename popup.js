@@ -634,28 +634,6 @@ document.addEventListener("DOMContentLoaded", function () {
   // Add storage info to the popup
   addStorageInfo();
 
-  // Add page status check
-  function checkPageStatus() {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      const statusDiv = document.getElementById('page-status');
-      if (tabs[0] && tabs[0].url) {
-        if (tabs[0].url.includes('chatgpt.com')) {
-          statusDiv.textContent = '✅ ChatGPT page detected';
-          statusDiv.className = 'page-status-success';
-        } else {
-          statusDiv.textContent = '⚠️ Navigate to ChatGPT to use this extension';
-          statusDiv.className = 'page-status-warning';
-        }
-      } else {
-        statusDiv.textContent = '❌ Could not detect current page';
-        statusDiv.className = 'page-status-error';
-      }
-    });
-  }
-
-  // Check page status when popup opens
-  checkPageStatus();
-
   // Function to ensure content script is loaded
   function ensureContentScript(tabId, callback) {
     // Try to ping the content script first
