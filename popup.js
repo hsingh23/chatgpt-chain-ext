@@ -610,9 +610,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Start migration on extension load
-  migratePromptsToLocal();
-
   // Add storage info to the UI
   function addStorageInfo() {
     const storageInfo = document.createElement("div");
