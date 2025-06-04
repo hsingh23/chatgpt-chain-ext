@@ -196,7 +196,8 @@
           id="separator"
           placeholder="Separator, e.g., ~ or \n for newline"
         />
-      </div>      <label for="new-prompt">Prompt Chain Text:</label>
+      </div>
+      <label for="new-prompt">Prompt Chain Text:</label>
       <textarea
         id="new-prompt"
         placeholder="Enter your prompts, separated by the chain separator. 
@@ -210,12 +211,30 @@ Commands:
 Example: Create outline~$wait 10s$~Write intro~$pause$~Continue writing"
       ></textarea>
       <button id="save-prompt">Save Prompt Chain</button>
-        <div style="margin-top: 12px; padding: 8px; background-color: #e7f3ff; border-left: 4px solid #007bff; border-radius: 4px; font-size: 12px;">
+      <div
+        style="
+          margin-top: 12px;
+          padding: 8px;
+          background-color: #e7f3ff;
+          border-left: 4px solid #007bff;
+          border-radius: 4px;
+          font-size: 12px;
+        "
+      >
         <strong>&#128161; Pro Tips:</strong>
-        <ul style="margin: 4px 0; padding-left: 16px;">
-          <li><strong>Wait Commands:</strong> Use <code>$wait 30s$</code> or <code>$wait 2m$</code> for delays</li>
-          <li><strong>Pause Points:</strong> Add <code>$pause$</code> for manual intervention</li>
-          <li><strong>Start Anywhere:</strong> Choose any step as your starting point</li>
+        <ul style="margin: 4px 0; padding-left: 16px">
+          <li>
+            <strong>Wait Commands:</strong> Use <code>$wait 30s$</code> or
+            <code>$wait 2m$</code> for delays
+          </li>
+          <li>
+            <strong>Pause Points:</strong> Add <code>$pause$</code> for manual
+            intervention
+          </li>
+          <li>
+            <strong>Start Anywhere:</strong> Choose any step as your starting
+            point
+          </li>
           <!-- <li><strong>Legacy Support:</strong> Old <code>$sleep30s$</code> syntax still works</li> -->
         </ul>
       </div>
@@ -245,9 +264,12 @@ Example: Create outline~$wait 10s$~Write intro~$pause$~Continue writing"
           >Image Throttle Delay (minutes):</label
         >
         <input type="number" id="imageThrottleDelayMs" min="0" step="0.1" />
-      </div>      <div class="settings-group checkbox-group">
+      </div>
+      <div class="settings-group checkbox-group">
         <input type="checkbox" id="enableSleepIndicator" />
-        <label for="enableSleepIndicator">Enable Visual Wait/Pause Indicator</label>
+        <label for="enableSleepIndicator"
+          >Enable Visual Wait/Pause Indicator</label
+        >
       </div>
       <div class="settings-group checkbox-group">
         <input type="checkbox" id="enableFloatingProgress" />
@@ -256,6 +278,7 @@ Example: Create outline~$wait 10s$~Write intro~$pause$~Continue writing"
         >
       </div>
       <button id="save-settings">Save Settings</button>
+      <button id="open-pip-view">Toggle PIP View</button>
     </div>
 
     <div id="status-message" style="display: none"></div>
