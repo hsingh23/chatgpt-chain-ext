@@ -21,7 +21,8 @@
 ### 🔧 **Advanced Controls**
 - **Pause/Resume**: Take control of your automation at any time
 - **Step Navigation**: Move forward/backward through steps when paused
-- **Custom Delays**: Set timing between prompts with `$sleep30s$` syntax
+- **Custom Delays**: Set timing between prompts with `$wait 30s$` syntax
+- **Pause Points**: Add strategic pause points with `$pause$` commands
 - **Image Throttling**: Automatic pacing for image generation commands
 
 ### 📊 **Intelligent Monitoring**
@@ -33,7 +34,7 @@
 ### ⚙️ **Flexible Configuration**
 - **Custom Separators**: Use `~`, newlines, or any character to split prompts
 - **Timing Controls**: Adjust delays between commands
-- **Visual Preferences**: Toggle progress indicators and sleep notifications
+- **Visual Preferences**: Toggle progress indicators and pause notifications
 - **Smart Storage**: Local storage for large chains, sync for settings
 
 ## 🚀 Quick Start
@@ -91,9 +92,10 @@ Generate 10 social media posts promoting the content
 ```
 Summarize the key points from this document: [PASTE_CONTENT]~
 Identify the main themes and patterns~
-$sleep10s$~
+$wait 10s$~
 Create a comparative analysis with industry standards~
 Generate actionable recommendations~
+$pause$~
 Format the findings into a professional report
 ```
 
@@ -102,19 +104,29 @@ Format the findings into a professional report
 Review this code for potential improvements: [PASTE_CODE]~
 Identify any security vulnerabilities~
 Suggest performance optimizations~
-$sleep15s$~
+$wait 15s$~
 Rewrite the code with improvements~
+$pause$~
 Create unit tests for the improved version~
 Generate documentation for the functions
 ```
 
 ## ⚙️ Advanced Configuration
 
-### Sleep Commands
+### Wait Commands
 Add delays between prompts for better pacing:
-- `$sleep5s$` - 5 second delay
-- `$sleep2m$` - 2 minute delay
-- `$sleep30s$` - 30 second delay
+- `$wait 5s$` - 5 second delay
+- `$wait 2m$` - 2 minute delay
+- `$wait 30s$` - 30 second delay
+
+**Legacy Support**: Old `$sleep` syntax still works:
+- `$sleep5s$`, `$sleep2m$`, `$sleep30s$`
+
+### Pause Commands
+Add strategic pause points for manual intervention:
+- `$pause$` - Pause execution for manual review/action
+- `Ask for user feedback $pause$` - Execute prompt then pause
+- `$pause$` (standalone) - Simple pause point
 
 ### Custom Separators
 Choose your preferred prompt separator:
@@ -127,7 +139,7 @@ Choose your preferred prompt separator:
 - **Default Delay**: Time between commands (default: 5 seconds)
 - **Image Throttle**: Pause after N image commands (default: 5)
 - **Image Delay**: Pause duration for image throttling (default: 2 minutes)
-- **Visual Indicators**: Toggle sleep notifications and progress panel
+- **Visual Indicators**: Toggle pause notifications and progress panel
 
 ## 🎛️ Control Panel Features
 
@@ -206,7 +218,7 @@ cd chatgpt-chain-ext
 - 🎉 Initial release
 - ⚙️ Basic prompt chain functionality
 - 💾 Save and load chain capabilities
-- ⏱️ Sleep command support
+- ⏱️ Wait/pause command support
 - 🎛️ Floating control panel
 
 ## 🤝 Support
