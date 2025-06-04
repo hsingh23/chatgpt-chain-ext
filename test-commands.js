@@ -29,7 +29,7 @@ function testParseCommand(promptText) {
   }
 
   // Check for new wait syntax: $wait 30s$ or $wait 2m$
-  const waitTagRegex = /\$wait\s+(\d+)([sm])\$/i;
+  const waitTagRegex = /\$wait\s*(\d+)([sm])\$/i;
   let explicitDelayMs = 0;
   let command = promptText;
   const waitMatch = promptText.match(waitTagRegex);
@@ -45,7 +45,7 @@ function testParseCommand(promptText) {
     command = promptText.replace(waitTagRegex, "").trim();
   } else {
     // Legacy support for old sleep syntax: $sleep30s$
-    const sleepTagRegex = /\$sleep(\d+)([sm])\$/i;
+    const sleepTagRegex = /\$sleep\s*(\d+)([sm])\$/i;
     const sleepMatch = promptText.match(sleepTagRegex);
 
     if (sleepMatch) {
