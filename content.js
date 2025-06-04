@@ -1024,7 +1024,8 @@ async function processNextCommand() {
         );        // Increment command index *after* successful execution and before delays for *this* command
         currentCommandIndex++;
         saveChatState(); // Save state after command completion
-        updateControlPanel(); // Reflect that one more command is done// 1. Image Generation Throttling
+        updateControlPanel(); // Reflect that one more command is done
+        // 1. Image Generation Throttling
         if (command.toLowerCase().includes("create image")) {
           imageCommandCounter++;
           console.log(`Image command count: ${imageCommandCounter}`);
