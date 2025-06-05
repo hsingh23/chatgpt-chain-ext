@@ -197,10 +197,12 @@ cd chatgpt-chain-ext
 # Install dependencies for testing
 npm install
 
-# Build the extension
+# Build the extension (creates dist/ and packs a CRX)
 npm run build
 
-# Load the `dist` directory in Chrome
+# The packed extension will be at `dist/chatgpt-chain-ext.crx`
+# and a `key.pem` file will be generated for signing.
+# Load the `dist` directory in Chrome or install the CRX directly
 ```
 
 ### Contributing

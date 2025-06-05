@@ -1,5 +1,5 @@
 {
-  "name": "chatgpt-chain-ext",
+  "name": "Chains-ChatGPTWorkflowAutomation-SmartPrompting",
   "version": "1.0.0",
   "description": "**Smart Prompt Chains for Enhanced AI Productivity**",
   "main": "content.js",
@@ -13,6 +13,7 @@
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "crx": "^5.0.1",
     "eslint": "^8.56.0",
     "mocha": "^11.5.0",
     "terser": "^5.41.0"
