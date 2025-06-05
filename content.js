@@ -817,7 +817,7 @@ async function submitPrompt(prompt) {
 
   return new Promise((resolve, reject) => {
     let attempts = 0;
-    const maxAttempts = 30; // Try for 6 seconds (30 * 200ms)
+    const maxAttempts = 1500; // Wait up to 5 minutes (1500 * 200ms)
     const tryClick = setInterval(async () => {
       if (isPaused) {
         // Don't attempt to click if paused
