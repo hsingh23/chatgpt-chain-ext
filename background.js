@@ -14,11 +14,24 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab || !tab.id) return;
   if (info.menuItemId === 'show-progress') {
-    chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel.html' }).then(() => {
-      chrome.sidePanel.open({ tabId: tab.id });
+    // Call open() synchronously after setOptions to preserve the user gesture
+    chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel.html' }, () => {
+      try {
+        chrome.sidePanel.open({ tabId: tab.id });
+      } catch (err) {
+        console.error('Failed to open side panel:', err);
+      }
     });
-    chrome.tabs.sendMessage(tab.id, { action: 'showProgress' });
+    try {
+      chrome.tabs.sendMessage(tab.id, { action: 'showProgress' });
+    } catch (_) {
+      // Ignore missing receivers
+    }
   } else if (info.menuItemId === 'toggle-pip') {
-    chrome.tabs.sendMessage(tab.id, { action: 'togglePip' });
+    try {
+      chrome.tabs.sendMessage(tab.id, { action: 'togglePip' });
+    } catch (_) {
+      // Ignore missing receivers
+    }
   }
 });
