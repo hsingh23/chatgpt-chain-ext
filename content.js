@@ -1,3 +1,4 @@
+/* global getSiteAdapter */
 // --- Configuration (loaded from storage, with defaults) ---
 const siteAdapter = getSiteAdapter();
 

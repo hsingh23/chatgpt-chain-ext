@@ -196,7 +196,10 @@ cd chatgpt-chain-ext
 # Install dependencies for testing
 npm install
 
-# No build process required - load directly in Chrome
+# Build the extension
+npm run build
+
+# Load the `dist` directory in Chrome
 ```
 
 ### Contributing
