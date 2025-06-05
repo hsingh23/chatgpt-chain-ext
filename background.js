@@ -5,6 +5,11 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ['all']
   });
   chrome.contextMenus.create({
+    id: 'open-side-panel',
+    title: 'Open Side Panel',
+    contexts: ['all']
+  });
+  chrome.contextMenus.create({
     id: 'toggle-pip',
     title: 'Toggle Picture-in-Picture',
     contexts: ['all']
@@ -15,17 +20,23 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (!tab || !tab.id) return;
   if (info.menuItemId === 'show-progress') {
     // Call open() synchronously after setOptions to preserve the user gesture
-    chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel.html' }, () => {
-      try {
-        chrome.sidePanel.open({ tabId: tab.id });
-      } catch (err) {
-        console.error('Failed to open side panel:', err);
-      }
-    });
+    chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel.html' });
+    try {
+      chrome.sidePanel.open({ tabId: tab.id });
+    } catch (err) {
+      console.error('Failed to open side panel:', err);
+    }
     try {
       chrome.tabs.sendMessage(tab.id, { action: 'showProgress' });
     } catch (_) {
       // Ignore missing receivers
+    }
+  } else if (info.menuItemId === 'open-side-panel') {
+    chrome.sidePanel.setOptions({ tabId: tab.id, path: 'sidepanel.html' });
+    try {
+      chrome.sidePanel.open({ tabId: tab.id });
+    } catch (err) {
+      console.error('Failed to open side panel:', err);
     }
   } else if (info.menuItemId === 'toggle-pip') {
     try {
