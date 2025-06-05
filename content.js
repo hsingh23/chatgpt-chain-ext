@@ -36,12 +36,17 @@ let sleepEndTime = 0; // Used for pausable sleep countdown
 let controlPanelElement = null;
 let progressStatusElement = null;
 let pendingCommandsListElement = null;
+let previousCommandsListElement = null;
+let retryQueueListElement = null;
 let pauseResumeButton = null;
 let stopButton = null;
 let navContainer = null;
 // Document Picture-in-Picture window and monitor
 let pipWindow = null;
 let pipMonitorInterval = null;
+
+// Queue for commands the user wants to retry
+let retryQueue = [];
 
 // --- Default settings (used if storage is not available or first run) ---
 const C_DEFAULT_SETTINGS = {
@@ -318,10 +323,33 @@ function createControlPanel() {
   pendingCommandsListElement = document.createElement("ul");
   pendingCommandsListElement.id = "ext-pending-commands";
   pendingCommandsListElement.style.cssText = `
-        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 150px; 
-        overflow-y: auto; font-size: 12px; background-color: rgba(0,0,0,0.2); 
+        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 150px;
+        overflow-y: auto; font-size: 12px; background-color: rgba(0,0,0,0.2);
         border-radius: 5px; padding: 5px;
     `;
+  retryQueueListElement = document.createElement("ul");
+  retryQueueListElement.id = "ext-retry-queue";
+  retryQueueListElement.style.cssText = `
+        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 80px;
+        overflow-y: auto; font-size: 12px; background-color: rgba(255,165,0,0.2);
+        border-radius: 5px; padding: 5px;
+    `;
+  previousCommandsListElement = document.createElement("ul");
+  previousCommandsListElement.id = "ext-previous-commands";
+  previousCommandsListElement.style.cssText = `
+        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 100px;
+        overflow-y: auto; font-size: 12px; background-color: rgba(0,0,0,0.1);
+        border-radius: 5px; padding: 5px;
+    `;
+  previousCommandsListElement.addEventListener("click", (e) => {
+    if (e.target && e.target.classList.contains("ext-retry-btn")) {
+      const idx = parseInt(e.target.getAttribute("data-index"));
+      if (!isNaN(idx) && currentChain && idx < currentCommandIndex) {
+        retryQueue.push(currentChain[idx]);
+        updateControlPanel();
+      }
+    }
+  });
   const buttonContainer = document.createElement("div");
   buttonContainer.style.display = "flex";
   buttonContainer.style.gap = "10px";
@@ -358,7 +386,7 @@ function createControlPanel() {
   backButton.textContent = "← Back";
   backButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
   backButton.onclick = () => {
-    if (isPaused && currentCommandIndex > 0) {
+    if (currentCommandIndex > 0) {
       currentCommandIndex--;
       updateControlPanel();
       saveChatState(); // Save state when navigating
@@ -370,7 +398,7 @@ function createControlPanel() {
   forwardButton.textContent = "Forward →";
   forwardButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
   forwardButton.onclick = () => {
-    if (isPaused && currentCommandIndex < totalCommandsInSequence - 1) {
+    if (currentCommandIndex < totalCommandsInSequence - 1) {
       currentCommandIndex++;
       updateControlPanel();
       saveChatState(); // Save state when navigating
@@ -436,6 +464,8 @@ function createControlPanel() {
   controlPanelElement.appendChild(quickWaitContainer);
   controlPanelElement.appendChild(imageThrottleContainer);
   controlPanelElement.appendChild(pendingCommandsListElement);
+  controlPanelElement.appendChild(retryQueueListElement);
+  controlPanelElement.appendChild(previousCommandsListElement);
   controlPanelElement.appendChild(buttonContainer);
   document.body.appendChild(controlPanelElement);
 }
@@ -446,6 +476,8 @@ function destroyControlPanel() {
     controlPanelElement = null;
     progressStatusElement = null;
     pendingCommandsListElement = null;
+    previousCommandsListElement = null;
+    retryQueueListElement = null;
     pauseResumeButton = null;
     stopButton = null;
     navContainer = null;
@@ -563,9 +595,9 @@ function updateControlPanel() {
   const forwardButton = document.getElementById("ext-forward-button");
 
   if (navContainer) {
-    navContainer.style.display = isPaused ? "flex" : "none";
+    navContainer.style.display = isChainRunning ? "flex" : "none";
 
-    if (isPaused && backButton && forwardButton) {
+    if (backButton && forwardButton) {
       // Update button states
       backButton.disabled = currentCommandIndex <= 0;
       forwardButton.disabled =
@@ -716,6 +748,39 @@ function updateControlPanel() {
       li.style.fontSize = "12px";
       pendingCommandsListElement.appendChild(li);
     }
+  }
+
+  if (previousCommandsListElement) {
+    previousCommandsListElement.innerHTML = "";
+    if (currentChain) {
+      const previous = currentChain.slice(0, currentCommandIndex);
+      previous.forEach((cmd, idx) => {
+        const li = document.createElement("li");
+        const { command: cleanCmd, isPauseCommand } = parseCommand(cmd);
+        const safe = cleanCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const text =
+          isPauseCommand && safe.trim() === ""
+            ? `[PAUSE COMMAND]`
+            : `${safe.substring(0, 40)}${safe.length > 40 ? "..." : ""}`;
+        li.innerHTML = `${idx + 1}. ${text} <button class="ext-retry-btn" data-index="${idx}" style="margin-left:4px;font-size:10px;">⟳</button>`;
+        li.style.fontSize = "11px";
+        li.style.marginBottom = "2px";
+        previousCommandsListElement.appendChild(li);
+      });
+    }
+  }
+
+  if (retryQueueListElement) {
+    retryQueueListElement.innerHTML = "";
+    retryQueue.forEach((cmd) => {
+      const li = document.createElement("li");
+      const { command: cleanCmd } = parseCommand(cmd);
+      const safe = cleanCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      li.innerHTML = `<span style="color:#fd7e14;">♻️</span> ${safe.substring(0,40)}${safe.length>40?"...":""}`;
+      li.style.fontSize = "11px";
+      li.style.marginBottom = "2px";
+      retryQueueListElement.appendChild(li);
+    });
   }
 
   pauseResumeButton.textContent = isPaused ? "Resume" : "Pause";
@@ -958,7 +1023,14 @@ async function processNextCommand() {
   }
 
   updateControlPanel();
-  const rawPrompt = currentChain[currentCommandIndex];
+  let rawPrompt;
+  let fromRetry = false;
+  if (retryQueue.length > 0) {
+    fromRetry = true;
+    rawPrompt = retryQueue.shift();
+  } else {
+    rawPrompt = currentChain[currentCommandIndex];
+  }
   const { command, explicitDelayMs, isPauseCommand } = parseCommand(rawPrompt);
 
   // Handle pause command
@@ -1010,7 +1082,9 @@ async function processNextCommand() {
       }
     }
     // Move to next command index after executing the command (if any)
-    currentCommandIndex++;
+    if (!fromRetry) {
+      currentCommandIndex++;
+    }
 
     // Now pause the sequence
     isPaused = true;
@@ -1057,7 +1131,9 @@ async function processNextCommand() {
         console.log(
           `ChatGPT response complete for: "${command.substring(0, 50)}..."`
         ); // Increment command index *after* successful execution and before delays for *this* command
-        currentCommandIndex++;
+        if (!fromRetry) {
+          currentCommandIndex++;
+        }
         saveChatState(); // Save state after command completion
         updateControlPanel(); // Reflect that one more command is done
         // 1. Image Generation Throttling
