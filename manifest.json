@@ -3,7 +3,7 @@
   "name": "Chains - ChatGPT Workflow Automation - Smart Prompting",
   "short_name": "Chains",
   "version": "1.2",
-  "description": "Automate ChatGPT conversations with intelligent prompt chains. Create, save, and execute multi-step workflows with custom starting positions, real-time progress tracking, and advanced controls. Perfect for content creation, research, and repetitive AI tasks.",
+  "description": "Automate ChatGPT conversations with Chains. Create, save, and execute multi-step workflows with advanced controls.",
   "author": "Harsh Singh",
   "homepage_url": "https://github.com/hisingh1/chatgpt-chain-ext",
   "action": {
