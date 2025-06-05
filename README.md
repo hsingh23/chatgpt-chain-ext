@@ -8,7 +8,8 @@
 
 > Automate ChatGPT conversations with intelligent prompt chains. Create, save, and execute multi-step workflows with custom starting positions, real-time progress tracking, and advanced controls.
 
-![Extension Demo](screenshot.png)
+![Extension Demo](markdown-images/image.png)
+![Side panel](markdown-images/image-1.png)
 
 ## ✨ Features
 
