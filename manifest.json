@@ -1,28 +1,63 @@
 {
-   "action": {
-      "default_popup": "popup.html"
-   },
-   "background": {
-      "service_worker": "background.js"
-   },
-   "side_panel": {
-      "default_path": "sidepanel.html"
-   },
-   "content_scripts": [ {
-      "js": [ "siteAdapters.js", "parseCommand.js", "content.js" ],
+  "manifest_version": 3,
+  "name": "Chains - ChatGPT Workflow Automation - Smart Prompting",
+  "short_name": "Chains",
+  "version": "1.2",
+  "description": "Automate ChatGPT conversations with intelligent prompt chains. Create, save, and execute multi-step workflows with custom starting positions, real-time progress tracking, and advanced controls. Perfect for content creation, research, and repetitive AI tasks.",
+  "author": "Harsh Singh",
+  "homepage_url": "https://github.com/hisingh1/chatgpt-chain-ext",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "js": ["siteAdapters.js", "parseCommand.js", "content.js"],
       "matches": [
-         "https://chatgpt.com/*",
-         "https://gemini.google.com/*",
-         "https://claude.ai/*"
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*"
       ]
-   } ],
-   "description": "Automate ChatGPT conversations with intelligent prompt chains. Create, save, and execute multi-step workflows with custom starting positions, real-time progress tracking, and advanced controls. Perfect for content creation, research, and repetitive AI tasks.",
-   "icons": {
-      "128": "chains.png"
-   },
-   "manifest_version": 3,
-   "name": "Chains - ChatGPT Workflow Automation - Smart Prompting",
-   "permissions": [ "storage", "activeTab", "scripting" , "contextMenus", "sidePanel" ],
-   "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.2"
+    }
+  ],
+  "icons": {
+    "16": "chains.png",
+    "32": "chains.png",
+    "48": "chains.png",
+    "128": "chains.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "https://claude.ai/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "chains.png",
+        "screenshot.png",
+        "screenshot2.png",
+        "padded_scrn.png",
+        "markdown-images/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "minimum_chrome_version": "114",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "update_url": "https://clients2.google.com/service/update2/crx"
 }

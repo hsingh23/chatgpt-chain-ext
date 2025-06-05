@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { minify } = require('terser');
+const { execSync } = require('child_process');
 
 const distDir = path.join(__dirname, 'dist');
 
@@ -22,7 +23,12 @@ const assetFiles = [
 ];
 
 async function build() {
-  if (!fs.existsSync(distDir)) {
+  // Clear the dist directory before building
+  if (fs.existsSync(distDir)) {
+    for (const file of fs.readdirSync(distDir)) {
+      fs.rmSync(path.join(distDir, file), { recursive: true, force: true });
+    }
+  } else {
     fs.mkdirSync(distDir);
   }
 
@@ -49,6 +55,15 @@ async function build() {
     const dest = path.join(distDir, file);
     fs.copyFileSync(src, dest);
   }
+
+  const keyPath = path.join(__dirname, 'key.pem');
+  if (!fs.existsSync(keyPath)) {
+    console.log('Generating private key...');
+    execSync(`npx crx keygen ${__dirname}`, { stdio: 'inherit' });
+  }
+  console.log('Packing extension...');
+  const crxOutput = path.join(__dirname, 'Chains.crx');
+  execSync(`npx crx pack ${distDir} -p ${keyPath} -o ${crxOutput}`, { stdio: 'inherit' });
 }
 
 build().catch(err => {
