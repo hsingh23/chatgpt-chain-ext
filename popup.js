@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const newPromptInput = document.getElementById("new-prompt");
   const savePromptButton = document.getElementById("save-prompt");
   const promptsListDiv = document.getElementById("prompts-list");
+  const lastRunInfoDiv = document.getElementById("last-run-info");
   const statusMessageDiv = document.getElementById("status-message");
 
   // Settings elements
@@ -699,6 +700,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Add storage info to the popup
   addStorageInfo();
+
+  // Fetch last chain state from the active tab
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (!tabs[0] || !tabs[0].id) return;
+    chrome.tabs.sendMessage(tabs[0].id, { action: "getState" }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.state) {
+        return;
+      }
+      const state = response.state;
+      if (state && state.chain && state.chain.length) {
+        const nextStep = Math.min(state.currentIndex + 1, state.totalCommands);
+        const truncated = state.chain[state.currentIndex]
+          ? state.chain[state.currentIndex].substring(0, 50)
+          : "";
+        lastRunInfoDiv.textContent =
+          `Last chain had ${state.totalCommands} steps. Next step: ${nextStep}` +
+          (truncated ? ` - ${truncated}...` : "");
+      }
+    });
+  });
 
   if (openPipButton) {
     openPipButton.addEventListener("click", function () {
