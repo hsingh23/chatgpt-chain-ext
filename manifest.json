@@ -3,7 +3,7 @@
       "default_popup": "popup.html"
    },
    "content_scripts": [ {
-      "js": [ "content.js" ],
+      "js": [ "parseCommand.js", "content.js" ],
       "matches": [ "https://chatgpt.com/*" ]
    } ],
    "description": "Automate ChatGPT conversations with intelligent prompt chains. Create, save, and execute multi-step workflows with custom starting positions, real-time progress tracking, and advanced controls. Perfect for content creation, research, and repetitive AI tasks.",

@@ -1,0 +1,16 @@
+{
+  "name": "chatgpt-chain-ext",
+  "version": "1.0.0",
+  "description": "**Smart Prompt Chains for Enhanced AI Productivity**",
+  "main": "content.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "mocha": "^11.5.0"
+  }
+}
