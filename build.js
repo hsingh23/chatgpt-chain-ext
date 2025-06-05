@@ -23,7 +23,12 @@ const assetFiles = [
 ];
 
 async function build() {
-  if (!fs.existsSync(distDir)) {
+  // Clear the dist directory before building
+  if (fs.existsSync(distDir)) {
+    for (const file of fs.readdirSync(distDir)) {
+      fs.rmSync(path.join(distDir, file), { recursive: true, force: true });
+    }
+  } else {
     fs.mkdirSync(distDir);
   }
 
@@ -57,7 +62,7 @@ async function build() {
     execSync(`npx crx keygen ${__dirname}`, { stdio: 'inherit' });
   }
   console.log('Packing extension...');
-  const crxOutput = path.join(distDir, 'chatgpt-chain-ext.crx');
+  const crxOutput = path.join(distDir, 'Chains.crx');
   execSync(`npx crx pack ${distDir} -p ${keyPath} -o ${crxOutput}`, { stdio: 'inherit' });
 }
 
