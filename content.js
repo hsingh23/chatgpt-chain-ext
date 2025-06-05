@@ -611,7 +611,9 @@ function updateControlPanel() {
           : `${actualIndex}. ${cleanCmd.substring(0, 40)}${
               cleanCmd.length > 40 ? "..." : ""
             }`;
-      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${displayText}</span> <button class="ext-retry-btn" data-index="${actualIndex - 1}" style="margin-left:4px;font-size:10px;background:none;border:none;color:#17a2b8;cursor:pointer;">⟳</button>`;
+      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${displayText}</span> <button class="ext-retry-btn" data-index="${
+        actualIndex - 1
+      }" style="margin-left:4px;font-size:10px;background:none;border:none;color:#17a2b8;cursor:pointer;">⟳</button>`;
       li.style.fontSize = "12px";
       li.style.marginBottom = "4px";
       pendingCommandsListElement.appendChild(li);
@@ -740,7 +742,6 @@ function updateControlPanel() {
     }
   }
 
-
   if (retryQueueListElement) {
     retryQueueListElement.innerHTML = "";
     if (retryQueue.length === 0) {
@@ -751,7 +752,10 @@ function updateControlPanel() {
         const li = document.createElement("li");
         const { command: cleanCmd } = parseCommand(cmd);
         const safe = cleanCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        li.innerHTML = `<span style="color:#fd7e14;">♻️</span> ${safe.substring(0,40)}${safe.length>40?"...":""}`;
+        li.innerHTML = `<span style="color:#fd7e14;">♻️</span> ${safe.substring(
+          0,
+          40
+        )}${safe.length > 40 ? "..." : ""}`;
         li.style.fontSize = "11px";
         li.style.marginBottom = "2px";
         retryQueueListElement.appendChild(li);
@@ -967,7 +971,6 @@ async function submitPrompt(prompt) {
     }, 200);
   });
 }
-
 
 async function processNextCommand() {
   if (isPaused) {
@@ -1541,7 +1544,9 @@ loadConfig(); // Load config when script initially loads
 // --- State Restoration ---
 // Wait for user messages to load before attempting state restore
 function attemptRestoreState(retries = 10) {
-  const userMsgs = document.querySelectorAll('[data-message-author-role="user"]');
+  const userMsgs = document.querySelectorAll(
+    '[data-message-author-role="user"]'
+  );
   if (userMsgs.length > 0 || retries <= 0) {
     restoreStateIfAvailable();
   } else {
@@ -1551,7 +1556,6 @@ function attemptRestoreState(retries = 10) {
 
 // Start initial state restoration attempt
 attemptRestoreState();
-
 
 // Monitor URL changes to update chat ID and save state
 let lastUrl = window.location.href;
