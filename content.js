@@ -104,9 +104,9 @@ function createSleepIndicator() {
   // ... (styling as before, ensure z-index is high)
   sleepIndicatorElement.style.cssText = `
         position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
-        background-color: rgba(0,0,0,0.8); color: white; padding: 20px 25px;
+        background-color: #1976d2; color: white; padding: 20px 25px;
         border-radius: 12px; z-index: 20001; text-align: center;
-        font-family: Arial, sans-serif; display: none; box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        font-family: 'Roboto', Arial, sans-serif; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     `;
   sleepIndicatorMessageElement = document.createElement("p");
   sleepIndicatorMessageElement.style.margin = "0 0 10px 0";
@@ -220,9 +220,9 @@ function createControlPanel() {
   controlPanelElement.id = "ext-control-panel";
   controlPanelElement.style.cssText = `
         position: fixed; top: ${initialTop}px; left: ${initialLeft}px;
-        background-color: rgb(221 234 246 / 85%); color: white; padding: 15px;
-        border-radius: 10px; z-index: 20000; font-family: Arial, sans-serif;
-        font-size: 14px; display: none; width: 280px; box-shadow: 0 0 15px rgba(0,0,0,0.4);
+        background-color: rgba(255, 255, 255, 0.95); color: #333; padding: 15px;
+        border-radius: 10px; z-index: 20000; font-family: 'Roboto', Arial, sans-serif;
+        font-size: 14px; display: none; width: 280px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         cursor: move; user-select: none;
     `;
 
@@ -300,20 +300,20 @@ function createControlPanel() {
   // Add progress bar
   const progressBarContainer = document.createElement("div");
   progressBarContainer.style.cssText = `
-    background-color: rgba(255,255,255,0.2); 
-    border-radius: 10px; 
-    height: 6px; 
-    margin-bottom: 10px; 
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    height: 6px;
+    margin-bottom: 10px;
     overflow: hidden;
   `;
 
   const progressBar = document.createElement("div");
   progressBar.id = "ext-progress-bar";
   progressBar.style.cssText = `
-    height: 100%; 
-    width: 0%; 
-    background-color: #007bff; 
-    transition: width 0.3s ease, background-color 0.3s ease;
+    height: 100%;
+    width: 0%;
+    background-color: #1976d2;
+    transition: width 0.3s ease;
     border-radius: 10px;
   `;
 
@@ -335,13 +335,13 @@ function createControlPanel() {
   pipButton.textContent = "⧉";
   pipButton.title = "Toggle Picture-in-Picture";
   pipButton.style.cssText =
-    "padding: 6px 8px; background-color: #17a2b8; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 0;";
+    "padding: 6px 8px; background-color: #1976d2; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
   pipButton.onclick = () => togglePiP();
 
   pauseResumeButton = document.createElement("button");
   pauseResumeButton.id = "ext-pause-resume-button";
   pauseResumeButton.textContent = "Pause";
-  pauseResumeButton.style.cssText = `padding: 8px 10px; background-color: #ffc107; color: black; border:none; border-radius:5px; cursor:pointer; flex-grow: 1;`;
+  pauseResumeButton.style.cssText = `padding: 8px 10px; background-color: #ffc107; color: black; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.2);`;
   pauseResumeButton.onclick = () => {
     if (isPaused) resumeSequence();
     else pauseSequence();
@@ -350,7 +350,7 @@ function createControlPanel() {
   stopButton = document.createElement("button");
   stopButton.id = "ext-stop-button";
   stopButton.textContent = "Stop";
-  stopButton.style.cssText = `padding: 8px 10px; background-color: #dc3545; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1;`;
+  stopButton.style.cssText = `padding: 8px 10px; background-color: #d32f2f; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.2);`;
   stopButton.onclick = stopSequence; // Navigation buttons for when paused
   navContainer = document.createElement("div");
   navContainer.id = "ext-nav-container";
@@ -359,7 +359,7 @@ function createControlPanel() {
   const backButton = document.createElement("button");
   backButton.id = "ext-back-button";
   backButton.textContent = "← Back";
-  backButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
+  backButton.style.cssText = `padding: 6px 8px; background-color: #9e9e9e; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.2);`;
   backButton.onclick = () => {
     if (isPaused && currentCommandIndex > 0) {
       currentCommandIndex--;
@@ -371,7 +371,7 @@ function createControlPanel() {
   const forwardButton = document.createElement("button");
   forwardButton.id = "ext-forward-button";
   forwardButton.textContent = "Forward →";
-  forwardButton.style.cssText = `padding: 6px 8px; background-color: #6c757d; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px;`;
+  forwardButton.style.cssText = `padding: 6px 8px; background-color: #9e9e9e; color: white; border:none; border-radius:5px; cursor:pointer; flex-grow: 1; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.2);`;
   forwardButton.onclick = () => {
     if (isPaused && currentCommandIndex < totalCommandsInSequence - 1) {
       currentCommandIndex++;
@@ -407,7 +407,7 @@ function createControlPanel() {
   waitDurations.forEach((duration) => {
     const waitBtn = document.createElement("button");
     waitBtn.textContent = duration.label;
-    waitBtn.style.cssText = `padding: 4px 8px; background-color: #6f42c1; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; flex-grow: 1;`;
+    waitBtn.style.cssText = `padding: 4px 8px; background-color: #1976d2; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; flex-grow: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.2);`;
     waitBtn.onclick = () => insertQuickWait(duration.ms);
     quickWaitButtons.appendChild(waitBtn);
   });
@@ -427,7 +427,7 @@ function createControlPanel() {
   const skipImageThrottleBtn = document.createElement("button");
   skipImageThrottleBtn.id = "ext-skip-image-throttle";
   skipImageThrottleBtn.textContent = "Skip Image Wait";
-  skipImageThrottleBtn.style.cssText = `padding: 4px 8px; background-color: #fd7e14; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; width: 100%;`;
+  skipImageThrottleBtn.style.cssText = `padding: 4px 8px; background-color: #1976d2; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; width: 100%; box-shadow: 0 1px 2px rgba(0,0,0,0.2);`;
   skipImageThrottleBtn.onclick = skipImageThrottle;
 
   imageThrottleContainer.appendChild(imageThrottleStatus);
@@ -441,7 +441,34 @@ function createControlPanel() {
   controlPanelElement.appendChild(pendingCommandsListElement);
   controlPanelElement.appendChild(buttonContainer);
   document.body.appendChild(controlPanelElement);
+  ensureControlPanelInView();
 }
+
+function ensureControlPanelInView() {
+  if (!controlPanelElement) return;
+  const margin = 20;
+  const rect = controlPanelElement.getBoundingClientRect();
+  let newLeft = rect.left;
+  let newTop = rect.top;
+
+  if (rect.right > window.innerWidth - margin) {
+    newLeft = window.innerWidth - controlPanelElement.offsetWidth - margin;
+  }
+  if (rect.bottom > window.innerHeight - margin) {
+    newTop = window.innerHeight - controlPanelElement.offsetHeight - margin;
+  }
+  if (rect.left < margin) newLeft = margin;
+  if (rect.top < margin) newTop = margin;
+
+  if (newLeft !== rect.left || newTop !== rect.top) {
+    controlPanelElement.style.left = `${newLeft}px`;
+    controlPanelElement.style.top = `${newTop}px`;
+    config.controlPanelPosition = { x: newLeft, y: newTop };
+    chrome.storage.sync.set({ extensionSettings: { ...config } });
+  }
+}
+
+window.addEventListener("resize", ensureControlPanelInView);
 
 function destroyControlPanel() {
   if (controlPanelElement) {
