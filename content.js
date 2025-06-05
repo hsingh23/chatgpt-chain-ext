@@ -36,7 +36,6 @@ let sleepEndTime = 0; // Used for pausable sleep countdown
 let controlPanelElement = null;
 let progressStatusElement = null;
 let pendingCommandsListElement = null;
-let previousCommandsListElement = null;
 let retryQueueListElement = null;
 let pauseResumeButton = null;
 let stopButton = null;
@@ -327,21 +326,7 @@ function createControlPanel() {
         overflow-y: auto; font-size: 12px; background-color: rgba(0,0,0,0.2);
         border-radius: 5px; padding: 5px;
     `;
-  retryQueueListElement = document.createElement("ul");
-  retryQueueListElement.id = "ext-retry-queue";
-  retryQueueListElement.style.cssText = `
-        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 80px;
-        overflow-y: auto; font-size: 12px; background-color: rgba(255,165,0,0.2);
-        border-radius: 5px; padding: 5px;
-    `;
-  previousCommandsListElement = document.createElement("ul");
-  previousCommandsListElement.id = "ext-previous-commands";
-  previousCommandsListElement.style.cssText = `
-        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 100px;
-        overflow-y: auto; font-size: 12px; background-color: rgba(0,0,0,0.1);
-        border-radius: 5px; padding: 5px;
-    `;
-  previousCommandsListElement.addEventListener("click", (e) => {
+  pendingCommandsListElement.addEventListener("click", (e) => {
     if (e.target && e.target.classList.contains("ext-retry-btn")) {
       const idx = parseInt(e.target.getAttribute("data-index"));
       if (!isNaN(idx) && currentChain && idx < currentCommandIndex) {
@@ -350,6 +335,13 @@ function createControlPanel() {
       }
     }
   });
+  retryQueueListElement = document.createElement("ul");
+  retryQueueListElement.id = "ext-retry-queue";
+  retryQueueListElement.style.cssText = `
+        list-style: none; padding: 0; margin: 0 0 10px 0; max-height: 80px;
+        overflow-y: auto; font-size: 12px; background-color: rgba(255,165,0,0.2);
+        border-radius: 5px; padding: 5px;
+    `;
   const buttonContainer = document.createElement("div");
   buttonContainer.style.display = "flex";
   buttonContainer.style.gap = "10px";
@@ -465,7 +457,6 @@ function createControlPanel() {
   controlPanelElement.appendChild(imageThrottleContainer);
   controlPanelElement.appendChild(pendingCommandsListElement);
   controlPanelElement.appendChild(retryQueueListElement);
-  controlPanelElement.appendChild(previousCommandsListElement);
   controlPanelElement.appendChild(buttonContainer);
   document.body.appendChild(controlPanelElement);
 }
@@ -476,7 +467,6 @@ function destroyControlPanel() {
     controlPanelElement = null;
     progressStatusElement = null;
     pendingCommandsListElement = null;
-    previousCommandsListElement = null;
     retryQueueListElement = null;
     pauseResumeButton = null;
     stopButton = null;
@@ -621,7 +611,7 @@ function updateControlPanel() {
           : `${actualIndex}. ${cleanCmd.substring(0, 40)}${
               cleanCmd.length > 40 ? "..." : ""
             }`;
-      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${displayText}</span>`;
+      li.innerHTML = `<span style="color: #28a745;">✅</span> <span style="text-decoration: line-through; color: #6c757d;">${displayText}</span> <button class="ext-retry-btn" data-index="${actualIndex - 1}" style="margin-left:4px;font-size:10px;background:none;border:none;color:#17a2b8;cursor:pointer;">⟳</button>`;
       li.style.fontSize = "12px";
       li.style.marginBottom = "4px";
       pendingCommandsListElement.appendChild(li);
@@ -750,37 +740,23 @@ function updateControlPanel() {
     }
   }
 
-  if (previousCommandsListElement) {
-    previousCommandsListElement.innerHTML = "";
-    if (currentChain) {
-      const previous = currentChain.slice(0, currentCommandIndex);
-      previous.forEach((cmd, idx) => {
-        const li = document.createElement("li");
-        const { command: cleanCmd, isPauseCommand } = parseCommand(cmd);
-        const safe = cleanCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const text =
-          isPauseCommand && safe.trim() === ""
-            ? `[PAUSE COMMAND]`
-            : `${safe.substring(0, 40)}${safe.length > 40 ? "..." : ""}`;
-        li.innerHTML = `${idx + 1}. ${text} <button class="ext-retry-btn" data-index="${idx}" style="margin-left:4px;font-size:10px;">⟳</button>`;
-        li.style.fontSize = "11px";
-        li.style.marginBottom = "2px";
-        previousCommandsListElement.appendChild(li);
-      });
-    }
-  }
 
   if (retryQueueListElement) {
     retryQueueListElement.innerHTML = "";
-    retryQueue.forEach((cmd) => {
-      const li = document.createElement("li");
-      const { command: cleanCmd } = parseCommand(cmd);
-      const safe = cleanCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      li.innerHTML = `<span style="color:#fd7e14;">♻️</span> ${safe.substring(0,40)}${safe.length>40?"...":""}`;
-      li.style.fontSize = "11px";
-      li.style.marginBottom = "2px";
-      retryQueueListElement.appendChild(li);
-    });
+    if (retryQueue.length === 0) {
+      retryQueueListElement.style.display = "none";
+    } else {
+      retryQueueListElement.style.display = "block";
+      retryQueue.forEach((cmd) => {
+        const li = document.createElement("li");
+        const { command: cleanCmd } = parseCommand(cmd);
+        const safe = cleanCmd.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        li.innerHTML = `<span style="color:#fd7e14;">♻️</span> ${safe.substring(0,40)}${safe.length>40?"...":""}`;
+        li.style.fontSize = "11px";
+        li.style.marginBottom = "2px";
+        retryQueueListElement.appendChild(li);
+      });
+    }
   }
 
   pauseResumeButton.textContent = isPaused ? "Resume" : "Pause";
