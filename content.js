@@ -1,5 +1,5 @@
-// --- Configuration (loaded from storage, with defaults) ---
 /* global getSiteAdapter */
+// --- Configuration (loaded from storage, with defaults) ---
 const siteAdapter = getSiteAdapter();
 
 let config = {
