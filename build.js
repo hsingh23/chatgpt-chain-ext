@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { minify } = require('terser');
+const { execSync } = require('child_process');
 
 const distDir = path.join(__dirname, 'dist');
 
@@ -49,6 +50,15 @@ async function build() {
     const dest = path.join(distDir, file);
     fs.copyFileSync(src, dest);
   }
+
+  const keyPath = path.join(__dirname, 'key.pem');
+  if (!fs.existsSync(keyPath)) {
+    console.log('Generating private key...');
+    execSync(`npx crx keygen ${__dirname}`, { stdio: 'inherit' });
+  }
+  console.log('Packing extension...');
+  const crxOutput = path.join(distDir, 'chatgpt-chain-ext.crx');
+  execSync(`npx crx pack ${distDir} -p ${keyPath} -o ${crxOutput}`, { stdio: 'inherit' });
 }
 
 build().catch(err => {
