@@ -4,13 +4,15 @@
   "description": "**Smart Prompt Chains for Enhanced AI Productivity**",
   "main": "content.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "lint": "eslint *.js test/*.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "eslint": "^8.56.0",
     "mocha": "^11.5.0"
   }
 }

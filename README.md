@@ -193,6 +193,9 @@ chatgpt-chain-ext/
 git clone https://github.com/your-username/chatgpt-chain-ext.git
 cd chatgpt-chain-ext
 
+# Install dependencies for testing
+npm install
+
 # No build process required - load directly in Chrome
 ```
 
@@ -203,8 +206,10 @@ cd chatgpt-chain-ext
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
--### Testing
-- Test on various supported conversation sites
+
+### Testing
+- Install dependencies with `npm install`
+- Test on various ChatGPT conversation types
 - Verify chain execution with different separators
 - Test pause/resume functionality
 - Validate error handling scenarios
