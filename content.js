@@ -817,7 +817,7 @@ async function submitPrompt(prompt) {
 
   return new Promise((resolve, reject) => {
     let attempts = 0;
-    const maxAttempts = 30; // Try for 6 seconds (30 * 200ms)
+    const maxAttempts = 1500; // Wait up to 5 minutes (1500 * 200ms)
     const tryClick = setInterval(async () => {
       if (isPaused) {
         // Don't attempt to click if paused
@@ -829,11 +829,22 @@ async function submitPrompt(prompt) {
         'button[aria-label="Send prompt"][data-testid="send-button"]'
       );
 
+      // Detect if ChatGPT is still generating a prior response
+      const chatgptBusy = !isResponseComplete();
+
       if (button && !button.disabled) {
         clearInterval(tryClick);
         button.click();
         console.log("Prompt submitted:", prompt.substring(0, 50) + "...");
         resolve();
+      } else if (chatgptBusy) {
+        // Another response is in progress; wait until ChatGPT is ready
+        if (attempts % 10 === 0) {
+          console.log(
+            "Waiting for ChatGPT to finish current response before submitting..."
+          );
+        }
+        return; // Don't increment attempts while waiting
       } else if (attempts >= maxAttempts) {
         // Check for retry button before giving up
         const retryButton = document.querySelector(
