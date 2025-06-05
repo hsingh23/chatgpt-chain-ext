@@ -204,6 +204,7 @@ cd chatgpt-chain-ext
 - Verify chain execution with different separators
 - Test pause/resume functionality
 - Validate error handling scenarios
+- Run unit tests with `npm test`
 
 ## 📝 Changelog
 
