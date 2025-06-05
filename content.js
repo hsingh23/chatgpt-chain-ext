@@ -1,4 +1,6 @@
 // --- Configuration (loaded from storage, with defaults) ---
+const siteAdapter = getSiteAdapter();
+
 let config = {
   defaultDelayMs: 5000,
   imageThrottleCount: 5,
@@ -793,16 +795,16 @@ function isResponseComplete() {
   // Check if the "Regenerate" button or a similar element indicating completion is visible,
   // and that the send button is enabled.
   const speechButton = document.querySelector(
-    'button[data-testid="composer-speech-button"]'
+    siteAdapter.speechButtonSelector
   );
   // const sendButton = document.querySelector('button[aria-label="Send prompt"][data-testid="send-button"]');
   return speechButton != null; // && (sendButton && !sendButton.disabled);
 }
 
 async function submitPrompt(prompt) {
-  const textarea = document.querySelector("#prompt-textarea");
+  const textarea = document.querySelector(siteAdapter.textareaSelector);
   if (!textarea) {
-    console.error("Textarea #prompt-textarea not found. Stopping sequence.");
+    console.error(`Textarea ${siteAdapter.textareaSelector} not found. Stopping sequence.`);
     await stopSequence();
     throw new Error("Textarea not found");
   }
@@ -825,9 +827,7 @@ async function submitPrompt(prompt) {
         return;
       }
 
-      const button = document.querySelector(
-        'button[aria-label="Send prompt"][data-testid="send-button"]'
-      );
+      const button = document.querySelector(siteAdapter.sendButtonSelector);
 
       // Detect if ChatGPT is still generating a prior response
       const chatgptBusy = !isResponseComplete();
@@ -847,9 +847,7 @@ async function submitPrompt(prompt) {
         return; // Don't increment attempts while waiting
       } else if (attempts >= maxAttempts) {
         // Check for retry button before giving up
-        const retryButton = document.querySelector(
-          'button[data-testid="regenerate-thread-error-button"]'
-        );
+        const retryButton = document.querySelector(siteAdapter.retryButtonSelector);
         if (retryButton) {
           console.log(
             "Send button timeout, but retry button found. Clicking retry..."
@@ -859,9 +857,7 @@ async function submitPrompt(prompt) {
 
           // Wait a bit and try to submit again
           setTimeout(() => {
-            const newButton = document.querySelector(
-              'button[aria-label="Send prompt"][data-testid="send-button"]'
-            );
+            const newButton = document.querySelector(siteAdapter.sendButtonSelector);
             if (newButton && !newButton.disabled) {
               newButton.click();
               console.log(
@@ -886,7 +882,7 @@ async function submitPrompt(prompt) {
       } else if (!button && attempts > 5) {
         // If button disappears after initial checks, look for retry button
         const retryButton = document.querySelector(
-          'button[data-testid="regenerate-thread-error-button"]'
+          siteAdapter.retryButtonSelector
         );
         if (retryButton) {
           console.log(
@@ -898,7 +894,7 @@ async function submitPrompt(prompt) {
           // Wait a bit and try to submit again
           setTimeout(() => {
             const newButton = document.querySelector(
-              'button[aria-label="Send prompt"][data-testid="send-button"]'
+              siteAdapter.sendButtonSelector
             );
             if (newButton && !newButton.disabled) {
               newButton.click();
@@ -1282,7 +1278,7 @@ function loadChatState() {
 // Get all submitted user prompts from the current chat
 function getSubmittedPrompts() {
   const userMessages = document.querySelectorAll(
-    '[data-message-author-role="user"]'
+    siteAdapter.userMessageSelector
   );
   return Array.from(userMessages).map((msg) => msg.textContent.trim());
 }
@@ -1489,7 +1485,7 @@ loadConfig(); // Load config when script initially loads
 // --- State Restoration ---
 // Wait for user messages to load before attempting state restore
 function attemptRestoreState(retries = 10) {
-  const userMsgs = document.querySelectorAll('[data-message-author-role="user"]');
+  const userMsgs = document.querySelectorAll(siteAdapter.userMessageSelector);
   if (userMsgs.length > 0 || retries <= 0) {
     restoreStateIfAvailable();
   } else {
@@ -1540,7 +1536,7 @@ async function retryLastPrompt() {
 
   // Look for retry button first
   const retryButton = document.querySelector(
-    'button[data-testid="regenerate-thread-error-button"]'
+    siteAdapter.retryButtonSelector
   );
   if (retryButton) {
     retryButton.click();
