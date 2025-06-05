@@ -18,7 +18,7 @@ const assetFiles = [
   'sidepanel.html',
   'chains.png',
   'screenshot.png',
-  'padded_scrn.png'
+  'screenshot2.png',
 ];
 
 async function build() {
