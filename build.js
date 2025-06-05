@@ -62,7 +62,7 @@ async function build() {
     execSync(`npx crx keygen ${__dirname}`, { stdio: 'inherit' });
   }
   console.log('Packing extension...');
-  const crxOutput = path.join(distDir, 'Chains.crx');
+  const crxOutput = path.join(__dirname, 'Chains.crx');
   execSync(`npx crx pack ${distDir} -p ${keyPath} -o ${crxOutput}`, { stdio: 'inherit' });
 }
 
