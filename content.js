@@ -1240,14 +1240,23 @@ async function stopSequence() {
   isWaitingForResponse = false; // Reset waiting state
   isImageThrottleActive = false; // Clear image throttle state
   imageThrottleEndTime = 0;
-  currentChain = null;
-
-  // Clear saved state for this chat
-  if (currentChatId && chatStates[currentChatId]) {
-    delete chatStates[currentChatId];
+  // Preserve chain state for potential resume
+  if (currentChatId) {
+    const state = {
+      chain: currentChain,
+      isRunning: false,
+      isPaused: false,
+      currentIndex: currentCommandIndex,
+      totalCommands: totalCommandsInSequence,
+      imageCounter: imageCommandCounter,
+      timestamp: Date.now(),
+    };
+    chatStates[currentChatId] = state;
     localStorage.setItem("chatgpt-chain-states", JSON.stringify(chatStates));
-    console.log(`Cleared state for chat ${currentChatId}`);
+    console.log(`Saved stop state for chat ${currentChatId}:`, state);
   }
+
+  currentChain = null;
 
   // currentCommandIndex = 0; // Keep currentCommandIndex to show final progress if needed, or reset
   // totalCommandsInSequence = 0;
@@ -1483,6 +1492,21 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     return true;
   } else if (request.action === "togglePip") {
     togglePiP().then((status) => sendResponse({ status }));
+    return true;
+  } else if (request.action === "getState") {
+    currentChatId = getCurrentChatId();
+    const state = loadChatState();
+    sendResponse({ state });
+    return true;
+  } else if (request.action === "showProgress") {
+    if (config.enableFloatingProgress) {
+      createControlPanel();
+      updateControlPanel();
+      if (controlPanelElement) controlPanelElement.style.display = "block";
+      sendResponse({ status: "shown" });
+    } else {
+      sendResponse({ status: "disabled" });
+    }
     return true;
   } else if (request.action === "updateConfig") {
     console.log("Received config update from popup:", request.newConfig);
