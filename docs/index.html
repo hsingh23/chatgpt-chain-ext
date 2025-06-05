@@ -6,90 +6,319 @@
   <title>Chains – ChatGPT Workflow Automation</title>
   <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" />
   <style>
-    body { padding-top: 20px; }
-    .promo-img { max-width: 100%; height: auto; }
+    body { padding-top:20px; font-family: Roboto, sans-serif; }
+    section { margin-bottom:40px; }
+    .promo-img { width:100%; height:auto; border-radius:4px; }
+    iframe { width:100%; max-width:560px; height:315px; }
+    footer { margin:40px 0; text-align:center; }
+
   </style>
 </head>
 <body>
   <div class="mui-container">
-    <h1 class="mui--text-center">Chains – ChatGPT Workflow Automation & Smart Prompting</h1>
+    <h1 class="mui--text-center mui--text-display1">Chains – ChatGPT Workflow Automation & Smart Prompting</h1>
     <div class="mui--text-center">
-      <iframe width="560" height="315" src="https://www.youtube.com/embed/Ju3dhEw_i7Q" title="Chains Demo" frameborder="0" allowfullscreen></iframe>
+      <iframe src="https://www.youtube.com/embed/Ju3dhEw_i7Q" title="Chains Demo" frameborder="0" allowfullscreen></iframe>
     </div>
     <div class="mui-row" style="margin-top:20px;">
-      <div class="mui-col-md-6 mui-col-sm-12">
-        <img class="promo-img" src="https://cdn.imgpile.com/f/LGOe3cW_xl.png" alt="Chains promo 1">
-      </div>
-      <div class="mui-col-md-6 mui-col-sm-12">
-        <img class="promo-img" src="https://cdn.imgpile.com/f/vHeXOmQ_xl.png" alt="Chains promo 2">
-      </div>
+      <div class="mui-col-md-6 mui-col-sm-12"><img class="promo-img" src="https://cdn.imgpile.com/f/LGOe3cW_xl.png" alt="Chains promo 1"></div>
+      <div class="mui-col-md-6 mui-col-sm-12"><img class="promo-img" src="https://cdn.imgpile.com/f/vHeXOmQ_xl.png" alt="Chains promo 2"></div>
     </div>
-    <h2>What is Chains?</h2>
-    <p>Chains is a lightweight yet powerful Chrome extension that enables you to:</p>
-    <ul>
-      <li>Build prompt sequences (called chains) to automate conversations with ChatGPT</li>
-      <li>Generate images automatically, one prompt at a time, with customizable delays</li>
-      <li>Insert wait times between steps to avoid rate limits or coordinate multi-step workflows</li>
-      <li>Restart from any point in the chain—even after refreshing or crashing</li>
-      <li>Pause mid-chain for manual edits, checks, or dynamic updates</li>
-      <li>Loop or step through chains forward or backward, as needed</li>
-      <li>Compose smarter AI workflows—no coding required</li>
-    </ul>
-    <h2>Key Features</h2>
-    <ul>
-      <li><strong>Drag-and-Run Prompt Chains</strong> – type a list of prompts in one box, separated by any symbol, then click Play Chain to run them.</li>
-      <li><strong>Insert Delays</strong> – add built-in delays like <code>$wait 30s$</code> between commands to manage rate limits.</li>
-      <li><strong>Automate Image Generation</strong> – perfect for creators using GPT-4o or similar tools to create visuals.</li>
-      <li><strong>Manual Pause & Edit Points</strong> – add <code>$pause$</code> anywhere to pause execution for review.</li>
-      <li><strong>Start from Any Step</strong> – re-run chains from any selected step using the Start From dropdown.</li>
-      <li><strong>Picture-in-Picture Preview</strong> – keep ChatGPT running in the background.</li>
-      <li><strong>Save & Manage Prompt Sets</strong> – store chains locally in your browser with no login required.</li>
-      <li><strong>Full Custom Settings</strong> – configure default wait times, image throttle limits, chain separators, and more.</li>
-    </ul>
-    <h2>Use Cases</h2>
-    <p>Chains can be used in countless creative and professional workflows, including:</p>
-    <ul>
-      <li>Automating multi-step storytelling for writers and prompt engineers</li>
-      <li>Generating picture book illustrations or animations for artists</li>
-      <li>Running batch research queries or document summaries for professionals</li>
-      <li>Testing code snippets and creating batch responses for developers</li>
-      <li>Scripting motivational routines or daily planning for productivity enthusiasts</li>
-    </ul>
-    <h2>Quick Start Guide</h2>
-    <ol>
-      <li>Install the extension from the Chrome Web Store.</li>
-      <li>Open ChatGPT in your browser.</li>
-      <li>Click the Chains icon in the sidebar or toolbar.</li>
-      <li>Enter your prompt chain, one per line.</li>
-      <li>Add <code>$wait 30s$</code> or <code>$pause$</code> if needed.</li>
-      <li>Click <strong>Play Chain</strong> and watch it run!</li>
-    </ol>
-    <h2>Pro Tips</h2>
-    <ul>
-      <li>Use <code>$wait</code> for delays and <code>$pause</code> for manual editing.</li>
-      <li>Enable Picture-in-Picture to keep the chain alive while multitasking.</li>
-      <li>Use consistent naming in image prompts for continuity.</li>
-      <li>Combine Chains with other Chrome extensions like Sora Animator for advanced workflows.</li>
-    </ul>
-    <h2>Frequently Asked Questions</h2>
-    <p><strong>Does Chains access or store my data?</strong> No. All chains and commands are stored locally in your browser. No data leaves your machine.</p>
-    <p><strong>What happens if I refresh the page mid-chain?</strong> Chains remembers your last prompt and offers to resume from where you left off.</p>
-    <p><strong>Can I stop or pause a chain mid-run?</strong> Yes. Use the Pause or Stop buttons to interrupt a chain at any time.</p>
-    <p><strong>Does it only work with ChatGPT?</strong> Currently Chains is optimized for ChatGPT, but support for other models is planned.</p>
-    <p><strong>How do I avoid rate limits for image generation?</strong> Use <code>$wait</code> delays or configure image throttle settings.</p>
-    <h2>Upcoming Features</h2>
-    <ul>
-      <li>Support for Gemini, Claude, and other LLMs</li>
-      <li>Chain folders and tags</li>
-      <li>Loop/repeat options</li>
-      <li>Export/import chains</li>
-      <li>Conditional chains (IF/THEN logic)</li>
-    </ul>
-    <h2>Install Chains Now!</h2>
-    <p class="mui--text-center">Give it a try and turn your prompts into powerful pipelines.</p>
-    <div class="mui--text-center" style="margin-bottom:40px;">
-      <a class="mui-btn mui-btn--raised mui-btn--primary" href="https://chrome.google.com/webstore" target="_blank">Install from Chrome Web Store</a>
-    </div>
+    <section>
+      <h2>What is Chains?</h2>
+      <p>Chains is a lightweight yet powerful Chrome extension that enables you to:</p>
+      <ul>
+        <li>Build prompt sequences (called chains) to automate conversations with ChatGPT</li>
+        <li>Generate images automatically with customizable delays</li>
+        <li>Insert wait times between steps to avoid rate limits</li>
+        <li>Restart from any point in the chain—even after refreshing</li>
+        <li>Pause mid-chain for manual edits</li>
+        <li>Loop or step through chains forward or backward</li>
+        <li>Compose smarter AI workflows—no coding required</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Key Features</h2>
+      <ul>
+        <li><strong>Drag-and-Run Prompt Chains</strong> – type a list of prompts separated by any symbol then run them</li>
+        <li><strong>Insert Delays</strong> – add built-in delays like <code>$wait 30s$</code> between commands</li>
+        <li><strong>Automate Image Generation</strong> – perfect for creators using GPT‑4o</li>
+        <li><strong>Manual Pause &amp; Edit Points</strong> – add <code>$pause$</code> anywhere to pause execution</li>
+        <li><strong>Start from Any Step</strong> – re-run chains from any selected step</li>
+        <li><strong>Picture-in-Picture Preview</strong> – keep ChatGPT running in the background</li>
+        <li><strong>Save &amp; Manage Prompt Sets</strong> – store chains locally with no login</li>
+        <li><strong>Full Custom Settings</strong> – configure delays, throttles and more</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Use Cases</h2>
+      <ul>
+        <li>Automate multi-step storytelling for writers</li>
+        <li>Generate illustrations or animations for artists</li>
+        <li>Run batch research queries for professionals</li>
+        <li>Test code snippets for developers</li>
+        <li>Script motivational routines for productivity enthusiasts</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Quick Start Guide</h2>
+      <ol>
+        <li>Install the extension from the Chrome Web Store</li>
+        <li>Open ChatGPT in your browser</li>
+        <li>Click the Chains icon in the sidebar</li>
+        <li>Enter your prompt chain one per line</li>
+        <li>Add <code>$wait 30s$</code> or <code>$pause$</code> if needed</li>
+        <li>Click <strong>Play Chain</strong> and watch it run</li>
+      </ol>
+    </section>
+    <section>
+      <h2>Pro Tips</h2>
+      <ul>
+        <li>Use <code>$wait</code> for delays and <code>$pause</code> for manual editing</li>
+        <li>Enable Picture-in-Picture to keep chains alive while multitasking</li>
+        <li>Use consistent naming in image prompts for continuity</li>
+        <li>Combine Chains with other Chrome extensions like Sora Animator</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Frequently Asked Questions</h2>
+      <p><strong>Does Chains access or store my data?</strong> No. All chains are stored locally.</p>
+      <p><strong>What happens if I refresh the page mid-chain?</strong> Chains remembers your last prompt and offers to resume.</p>
+      <p><strong>Can I stop or pause a chain mid-run?</strong> Yes. Use the Pause or Stop buttons at any time.</p>
+      <p><strong>Does it only work with ChatGPT?</strong> Currently Chains is optimized for ChatGPT, but support for other models is planned.</p>
+      <p><strong>How do I avoid rate limits for image generation?</strong> Use <code>$wait</code> delays or configure image throttle settings.</p>
+    </section>
+    <section>
+      <h2>Upcoming Features</h2>
+      <ul>
+        <li>Support for Gemini, Claude and other LLMs</li>
+        <li>Chain folders and tags</li>
+        <li>Loop/repeat options</li>
+        <li>Export/import chains</li>
+        <li>Conditional chains (IF/THEN logic)</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Install Chains Now!</h2>
+      <p class="mui--text-center">Give it a try and turn your prompts into powerful pipelines.</p>
+      <div class="mui--text-center" style="margin-bottom:40px;">
+        <a class="mui-btn mui-btn--raised mui-btn--primary" href="https://chrome.google.com/webstore" target="_blank">Install from Chrome Web Store</a>
+      </div>
+    </section>
+    <footer>
+      <p><a href="#privacy">Privacy</a></p>
+    </footer>
+    <section id="privacy">
+<h1>Privacy Policy for Chains - ChatGPT Workflow Automation</h1>
+<p><strong>Effective Date: June 4, 2025</strong><br />
+<strong>Last Updated: June 4, 2025</strong></p>
+<h2>Overview</h2>
+<p>Chains - ChatGPT Workflow Automation ("we," "our," or "the extension") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our Chrome extension.</p>
+<h2>Information We Collect</h2>
+<h3>Data Stored Locally</h3>
+<p>Our extension stores the following data locally on your device:</p>
+<ul>
+<li><strong>Prompt Chains</strong>: The text content of prompt sequences you create and save</li>
+<li><strong>User Settings</strong>: Your preferences including:</li>
+<li>Default delay settings between commands</li>
+<li>Image throttle configurations</li>
+<li>Visual indicator preferences (sleep notifications, progress panel)</li>
+<li>Custom separator choices</li>
+<li>Control panel position preferences</li>
+</ul>
+<h3>Data We Do NOT Collect</h3>
+<p>We want to be clear about what we <strong>do not</strong> collect:</p>
+<ul>
+<li>❌ <strong>Personal Information</strong>: We do not collect names, email addresses, or contact information</li>
+<li>❌ <strong>ChatGPT Conversations</strong>: We do not store, transmit, or access your ChatGPT conversations</li>
+<li>❌ <strong>Browsing History</strong>: We do not track your browsing activity outside of ChatGPT</li>
+<li>❌ <strong>Analytics Data</strong>: We do not collect usage analytics or tracking data</li>
+<li>❌ <strong>Third-Party Data</strong>: We do not integrate with analytics services or ad networks</li>
+</ul>
+<h2>How We Use Your Information</h2>
+<h3>Local Data Usage</h3>
+<p>Your data is used exclusively for:</p>
+<ol>
+<li><strong>Functionality</strong>: Storing your prompt chains and settings to provide the extension's core features</li>
+<li><strong>User Experience</strong>: Remembering your preferences and control panel position</li>
+<li><strong>Workflow Continuity</strong>: Enabling you to save, edit, and reuse prompt sequences</li>
+</ol>
+<h3>No External Transmission</h3>
+<ul>
+<li>Your data <strong>never leaves your device</strong></li>
+<li>We do not upload your prompt chains to any servers</li>
+<li>We do not transmit your settings or usage patterns</li>
+<li>All data remains in your local browser storage</li>
+</ul>
+<h2>Data Storage and Security</h2>
+<h3>Chrome Storage API</h3>
+<p>We use Chrome's built-in storage APIs:</p>
+<ul>
+<li><strong>Local Storage</strong>: For prompt chains (unlimited size, device-specific)</li>
+<li><strong>Sync Storage</strong>: For user settings (synced across your Chrome devices if you're signed in)</li>
+</ul>
+<h3>Security Measures</h3>
+<ul>
+<li><strong>Local Encryption</strong>: Data is stored using Chrome's secure storage mechanisms</li>
+<li><strong>No External Access</strong>: Only our extension can access the stored data</li>
+<li><strong>User Control</strong>: You can delete all data at any time through Chrome's extension settings</li>
+</ul>
+<h3>Data Retention</h3>
+<ul>
+<li>Data is retained until you manually delete it or uninstall the extension</li>
+<li>No automatic data expiration or cleanup</li>
+<li>Complete data portability - you own and control all your data</li>
+</ul>
+<h2>Permissions Explained</h2>
+<p>Our extension requests minimal permissions:</p>
+<h3><code>storage</code></h3>
+<ul>
+<li><strong>Purpose</strong>: Save your prompt chains and settings</li>
+<li><strong>Scope</strong>: Only data you explicitly create within the extension</li>
+<li><strong>Access</strong>: Read/write to extension's dedicated storage space only</li>
+</ul>
+<h3><code>activeTab</code></h3>
+<ul>
+<li><strong>Purpose</strong>: Detect when you're on ChatGPT to enable functionality</li>
+<li><strong>Scope</strong>: Only the currently active tab</li>
+<li><strong>Access</strong>: URL detection only, no content reading</li>
+</ul>
+<h3><code>scripting</code></h3>
+<ul>
+<li><strong>Purpose</strong>: Inject automation scripts into ChatGPT pages</li>
+<li><strong>Scope</strong>: Only chatgpt.com pages as specified in manifest</li>
+<li><strong>Access</strong>: Required for core prompt automation functionality</li>
+</ul>
+<h2>Third-Party Services</h2>
+<h3>OpenAI/ChatGPT</h3>
+<ul>
+<li>Our extension operates on ChatGPT.com but does not interact with OpenAI's servers</li>
+<li>We do not modify, intercept, or store your ChatGPT conversations</li>
+<li>Your interactions with ChatGPT are governed by OpenAI's privacy policy</li>
+<li>We only automate the input process - all data flows directly between you and ChatGPT</li>
+</ul>
+<h3>No Other Third Parties</h3>
+<ul>
+<li>We do not use analytics services (Google Analytics, etc.)</li>
+<li>We do not integrate with advertising networks</li>
+<li>We do not use crash reporting services</li>
+<li>We do not connect to any external APIs or services</li>
+</ul>
+<h2>Children's Privacy</h2>
+<p>This extension is not intended for children under 13. We do not knowingly collect information from children under 13. If you believe a child has provided information to our extension, please contact us immediately.</p>
+<h2>Data Rights and Control</h2>
+<h3>Your Rights</h3>
+<p>You have complete control over your data:</p>
+<ul>
+<li><strong>Access</strong>: View all stored data through the extension interface</li>
+<li><strong>Modify</strong>: Edit or update your prompt chains and settings at any time</li>
+<li><strong>Delete</strong>: Remove individual chains or clear all data</li>
+<li><strong>Export</strong>: Copy your prompt chains for backup or transfer</li>
+</ul>
+<h3>Data Deletion</h3>
+<p>To delete your data:</p>
+<ol>
+<li><strong>Individual Chains</strong>: Use the delete button in the extension popup</li>
+<li><strong>All Settings</strong>: Reset to defaults in the settings section</li>
+<li><strong>Complete Removal</strong>: Uninstall the extension from Chrome</li>
+</ol>
+<h3>Data Portability</h3>
+<ul>
+<li>Your prompt chains are stored as plain text</li>
+<li>Settings are stored in standard JSON format</li>
+<li>Easy to backup, transfer, or migrate to other systems</li>
+</ul>
+<h2>Changes to Privacy Policy</h2>
+<h3>Notification of Changes</h3>
+<ul>
+<li>We will update the "Last Updated" date when changes are made</li>
+<li>Significant changes will be communicated through extension updates</li>
+<li>Continued use after changes constitutes acceptance of the new policy</li>
+</ul>
+<h3>Types of Changes</h3>
+<p>Changes may include:
+- Clarifications to existing practices
+- Updates for new features
+- Compliance with new regulations
+- Enhanced security measures</p>
+<h2>Compliance</h2>
+<h3>Data Protection Standards</h3>
+<p>Our practices align with:
+- <strong>GDPR</strong> (General Data Protection Regulation) principles
+- <strong>CCPA</strong> (California Consumer Privacy Act) requirements
+- <strong>Chrome Web Store</strong> privacy policies
+- <strong>Industry best practices</strong> for browser extensions</p>
+<h3>Transparency</h3>
+<p>We believe in complete transparency about data practices:
+- No hidden data collection
+- Clear permission requests
+- Open-source code available for review
+- Detailed documentation of all features</p>
+<h2>Contact Information</h2>
+<h3>Questions or Concerns</h3>
+<p>If you have questions about this Privacy Policy or our data practices:</p>
+<ul>
+<li><strong>Email</strong>: privacy@your-domain.com</li>
+<li><strong>GitHub Issues</strong>: <a href="https://github.com/your-username/chatgpt-chain-ext/issues">Privacy-related issues</a></li>
+<li><strong>Response Time</strong>: We aim to respond within 48 hours</li>
+</ul>
+<h3>Data Requests</h3>
+<p>For data-related requests:
+- <strong>Data Access</strong>: Instructions provided above for viewing your data
+- <strong>Data Deletion</strong>: Instructions provided above for removing data
+- <strong>Data Portability</strong>: Your data is already in portable formats</p>
+<h2>Legal Basis for Processing</h2>
+<h3>Legitimate Interests</h3>
+<p>We process data based on:
+- <strong>Functionality</strong>: Necessary for the extension to work as intended
+- <strong>User Preferences</strong>: Storing settings improves user experience
+- <strong>Data Minimization</strong>: We collect only what's necessary for functionality</p>
+<h3>Consent</h3>
+<p>By installing and using the extension, you consent to:
+- Local storage of your prompt chains and settings
+- The use of required browser permissions
+- This privacy policy and our data practices</p>
+<h2>International Users</h2>
+<h3>Data Location</h3>
+<ul>
+<li>All data remains on your local device</li>
+<li>No international data transfers occur</li>
+<li>Chrome sync storage follows Google's data location policies</li>
+</ul>
+<h3>Regional Compliance</h3>
+<ul>
+<li><strong>EU Users</strong>: GDPR rights respected (access, portability, deletion)</li>
+<li><strong>California Users</strong>: CCPA rights respected (transparency, deletion)</li>
+<li><strong>Other Regions</strong>: Local privacy laws respected where applicable</li>
+</ul>
+<h2>Updates and Maintenance</h2>
+<h3>Security Updates</h3>
+<ul>
+<li>Regular security reviews of code and practices</li>
+<li>Prompt updates for any discovered vulnerabilities</li>
+<li>Compliance with Chrome extension security standards</li>
+</ul>
+<h3>Feature Updates</h3>
+<ul>
+<li>New features will not change core privacy principles</li>
+<li>Additional permissions will be clearly explained</li>
+<li>User consent required for any significant changes</li>
+</ul>
+<hr />
+<h2>Summary</h2>
+<p><strong>Your privacy is our priority. We collect minimal data, store everything locally, and give you complete control over your information.</strong></p>
+<ul>
+<li>✅ <strong>Local Storage Only</strong> - Your data never leaves your device</li>
+<li>✅ <strong>No Tracking</strong> - We don't monitor your usage or behavior  </li>
+<li>✅ <strong>Complete Control</strong> - You own and control all your data</li>
+<li>✅ <strong>Transparent</strong> - Open about all practices and permissions</li>
+<li>✅ <strong>Secure</strong> - Using Chrome's built-in security mechanisms</li>
+</ul>
+<p>For the most current version of this Privacy Policy, please check this document regularly.</p>
+<p><strong>Last Review</strong>: June 4, 2025<br />
+<strong>Next Scheduled Review</strong>: December 4, 2025</p>
+
+    </section>
   </div>
 </body>
 </html>
