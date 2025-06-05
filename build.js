@@ -29,7 +29,18 @@ async function build() {
   for (const file of jsFiles) {
     const filePath = path.join(__dirname, file);
     const code = fs.readFileSync(filePath, 'utf8');
-    const result = await minify(code);
+    const result = await minify(code, {
+      compress: {
+        drop_console: true,
+        passes: 2
+      },
+      mangle: {
+        
+      },
+      output: {
+        comments: false
+      }
+    });
     fs.writeFileSync(path.join(distDir, file), result.code, 'utf8');
   }
 
