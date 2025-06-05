@@ -62,7 +62,20 @@ async function build() {
     execSync(`npx crx keygen ${__dirname}`, { stdio: 'inherit' });
   }
   console.log('Packing extension...');
-  const crxOutput = path.join(__dirname, 'Chains.crx');
+  const buildDir = path.join(__dirname, 'build');
+  // Create ZIP of dist folder in build dir
+  const zipPath = path.join(buildDir, 'Chains.zip');
+  if (fs.existsSync(buildDir)) {
+    for (const file of fs.readdirSync(buildDir)) {
+      fs.rmSync(path.join(buildDir, file), { recursive: true, force: true });
+    }
+  } else {
+    fs.mkdirSync(buildDir);
+  }
+  
+  execSync(`zip -r ${zipPath} .`, { cwd: distDir, stdio: 'inherit' });
+
+  const crxOutput = path.join(buildDir, 'Chains.crx');
   execSync(`npx crx pack ${distDir} -p ${keyPath} -o ${crxOutput}`, { stdio: 'inherit' });
 }
 
