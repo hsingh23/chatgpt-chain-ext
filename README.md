@@ -53,8 +53,8 @@
    - Click "Load unpacked"
    - Select the extension directory
 
-3. **Navigate to ChatGPT**
-   - Go to [chatgpt.com](https://chatgpt.com)
+3. **Navigate to your AI site**
+   - Visit [chatgpt.com](https://chatgpt.com) or any other supported site
    - The extension icon should appear in your toolbar
 
 ### Basic Usage
@@ -75,6 +75,10 @@
    - Watch the floating control panel for real-time status
    - Pause/resume as needed
    - Navigate between steps when paused
+
+## 🔌 Adding More Websites
+1. Edit `manifest.json` and add the site's URL pattern under `content_scripts.matches`.
+2. Update `siteAdapters.js` with the correct selectors for the new site.
 
 ## 📖 Usage Examples
 
@@ -202,6 +206,7 @@ npm install
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+
 ### Testing
 - Install dependencies with `npm install`
 - Test on various ChatGPT conversation types
@@ -229,8 +234,8 @@ npm install
 ## 🤝 Support
 
 ### Common Issues
-- **"Could not establish connection"**: Refresh the ChatGPT page and try again
-- **Extension not working**: Ensure you're on chatgpt.com
+- **"Could not establish connection"**: Refresh the page and try again
+- **Extension not working**: Ensure the website is supported in `manifest.json`
 - **Chains not saving**: Check browser storage permissions
 
 ### Getting Help
