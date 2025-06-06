@@ -8,6 +8,16 @@ document.addEventListener("DOMContentLoaded", function () {
     enableFloatingProgress: true,
   };
 
+  // Initialize Firebase (replace config)
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+    projectId: "YOUR_FIREBASE_PROJECT_ID",
+  };
+  if (typeof firebase !== "undefined" && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+
   const separatorInput = document.getElementById("separator");
   const newPromptInput = document.getElementById("new-prompt");
   const savePromptButton = document.getElementById("save-prompt");
@@ -30,6 +40,25 @@ document.addEventListener("DOMContentLoaded", function () {
   const saveSettingsButton = document.getElementById("save-settings");
   const openPipButton = document.getElementById("open-pip-view");
 
+  // Account / usage elements
+  const usageInfoDiv = document.getElementById("usage-info");
+  const emailInput = document.getElementById("user-email");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const restoreBtn = document.getElementById("restore-btn");
+  const stripeBtn = document.getElementById("stripe-btn");
+  const loginArea = document.getElementById("login-area");
+  const loggedInArea = document.getElementById("logged-in-area");
+  const accountSection = document.getElementById("account-section");
+  const accountEmail = document.getElementById("account-email");
+  const paymentInfo = document.getElementById("payment-info");
+  const limitsInfo = document.getElementById("limits-info");
+  const passwordInput = document.getElementById("user-password");
+
+  const FIREBASE_CHECK_URL =
+    "https://your-firebase-function-url/checkPayment"; // Replace with your endpoint
+  const STRIPE_CHECKOUT_URL = "https://your-stripe-checkout-url"; // Replace with your checkout URL
+
   function showStatus(message, isError = false) {
     statusMessageDiv.textContent = message;
     statusMessageDiv.className = isError ? "status-error" : "status-success";
@@ -37,6 +66,218 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
       statusMessageDiv.style.display = "none";
     }, 3000);
+  }
+
+  function showAccountUI(user) {
+    accountSection.style.display = "block";
+    const freeInfo = "Free: 1/day, 10/month";
+    const accountInfo = "Account: 2/day, 15/month";
+    if (user && user.email) {
+      loginArea.style.display = "none";
+      loggedInArea.style.display = "block";
+      accountEmail.textContent = user.email;
+      restoreBtn.style.display = "inline-block";
+      if (user.isPaid) {
+        paymentInfo.textContent = "Paid - unlimited access";
+        stripeBtn.style.display = "none";
+        limitsInfo.textContent = "";
+      } else {
+        paymentInfo.textContent = "Free account (limits apply)";
+        stripeBtn.style.display = "inline-block";
+        limitsInfo.textContent = `${accountInfo}. Upgrade for unlimited access.`;
+      }
+    } else {
+      loginArea.style.display = "block";
+      loggedInArea.style.display = "none";
+      restoreBtn.style.display = "none";
+      limitsInfo.textContent = `${freeInfo}. Create an account for ${accountInfo}.`;
+    }
+  }
+
+  function updateUsageInfo(usage, dailyLimit, monthlyLimit) {
+    const dailyText = dailyLimit === Infinity ? '∞' : dailyLimit;
+    const monthlyText = monthlyLimit === Infinity ? '∞' : monthlyLimit;
+    usageInfoDiv.textContent = `Daily: ${usage.dailyCount}/${dailyText}  Monthly: ${usage.monthlyCount}/${monthlyText}`;
+  }
+
+  function checkPaymentStatus(email, cb, force) {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${now.getMonth() + 1}`;
+    chrome.storage.local.get(["userData"], (data) => {
+      const user = data.userData || {};
+      if (!force && user.paidCheckMonth === month && typeof user.isPaid === "boolean") {
+        cb(user.isPaid);
+        return;
+      }
+
+      fetch(FIREBASE_CHECK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          const paid = !!d.paid;
+          chrome.storage.local.set({ userData: { ...user, isPaid: paid, paidCheckMonth: month } }, () => {
+            cb(paid);
+          });
+        })
+        .catch((e) => {
+          console.error("Payment check failed", e);
+          cb(user.isPaid || false);
+        });
+    });
+  }
+
+  function checkAndIncrementUsage(callback) {
+    chrome.storage.local.get(["usageData", "userData"], (data) => {
+      const usage = data.usageData || {};
+      const user = data.userData || {};
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const month = `${now.getFullYear()}-${now.getMonth() + 1}`;
+      if (usage.dailyDate !== today) {
+        usage.dailyDate = today;
+        usage.dailyCount = 0;
+      }
+      if (usage.month !== month) {
+        usage.month = month;
+        usage.monthlyCount = 0;
+      }
+
+      let dailyLimit = user.isPaid ? Infinity : user.email ? 2 : 1;
+      let monthlyLimit = user.isPaid ? Infinity : user.email ? 15 : 10;
+
+      updateUsageInfo(usage, dailyLimit, monthlyLimit);
+
+      if (
+        usage.dailyCount >= dailyLimit ||
+        usage.monthlyCount >= monthlyLimit
+      ) {
+        showAccountUI(user);
+        if (!user.email) {
+          showStatus("Please create an account to continue", true);
+        } else if (!user.isPaid) {
+          showStatus("Usage limit reached - upgrade required", true);
+        }
+        return;
+      }
+
+      usage.dailyCount++;
+      usage.monthlyCount++;
+      chrome.storage.local.set({ usageData: usage }, () => {
+        updateUsageInfo(usage, dailyLimit, monthlyLimit);
+        callback();
+      });
+    });
+  }
+
+  function initializeAccount() {
+    chrome.storage.local.get(["userData", "usageData"], (data) => {
+      const user = data.userData || {};
+      const usage = data.usageData || {};
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const month = `${now.getFullYear()}-${now.getMonth() + 1}`;
+      if (usage.dailyDate !== today) {
+        usage.dailyDate = today;
+        usage.dailyCount = 0;
+      }
+      if (usage.month !== month) {
+        usage.month = month;
+        usage.monthlyCount = 0;
+      }
+      chrome.storage.local.set({ usageData: usage });
+      const finish = (updatedUser) => {
+        const finalUser = updatedUser || user;
+        const dailyLimit = finalUser.isPaid ? Infinity : finalUser.email ? 2 : 1;
+        const monthlyLimit = finalUser.isPaid ? Infinity : finalUser.email ? 15 : 10;
+        showAccountUI(finalUser);
+        updateUsageInfo(usage, dailyLimit, monthlyLimit);
+      };
+
+      if (user.email) {
+        checkPaymentStatus(user.email, (paid) => finish({ ...user, isPaid: paid }), false);
+      } else {
+        finish();
+      }
+    });
+  }
+
+  if (loginBtn) {
+    loginBtn.addEventListener("click", function () {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      if (!email || !password) {
+        showStatus("Email and password required", true);
+        return;
+      }
+
+      if (typeof firebase !== "undefined") {
+        firebase
+          .auth()
+          .signInWithEmailAndPassword(email, password)
+          .catch((err) => {
+            showStatus("Login failed: " + err.message, true);
+            throw err;
+          })
+          .then((cred) => {
+            if (cred) {
+              checkPaymentStatus(email, (paid) => {
+                const user = { email, isPaid: paid };
+                chrome.storage.local.get(["usageData"], (d) => {
+                  const usage = d.usageData || {};
+                  chrome.storage.local.set({ userData: user }, () => {
+                    showAccountUI(user);
+                    const dailyLimit = user.isPaid ? Infinity : 2;
+                    const monthlyLimit = user.isPaid ? Infinity : 15;
+                    updateUsageInfo(usage, dailyLimit, monthlyLimit);
+                    showStatus(paid ? "Payment verified" : "Logged in");
+                  });
+                });
+              }, true);
+            }
+          });
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", function () {
+      chrome.storage.local.set({ userData: {} }, () => {
+        showAccountUI({});
+        showStatus("Logged out");
+      });
+    });
+  }
+
+  if (restoreBtn) {
+    restoreBtn.addEventListener("click", function () {
+      chrome.storage.local.get(["userData"], (data) => {
+        const user = data.userData || {};
+        if (user.email) {
+          checkPaymentStatus(user.email, (paid) => {
+          const updated = { ...user, isPaid: paid };
+          chrome.storage.local.set({ userData: updated }, () => {
+              showAccountUI(updated);
+              chrome.storage.local.get(["usageData"], (d) => {
+                const usage = d.usageData || {};
+                const dailyLimit = updated.isPaid ? Infinity : 2;
+                const monthlyLimit = updated.isPaid ? Infinity : 15;
+                updateUsageInfo(usage, dailyLimit, monthlyLimit);
+                showStatus(paid ? "Access restored" : "No payment found", !paid);
+              });
+          });
+          }, true);
+        }
+      });
+    });
+  }
+
+  if (stripeBtn) {
+    stripeBtn.addEventListener("click", function () {
+      chrome.tabs.create({ url: STRIPE_CHECKOUT_URL });
+    });
   }
 
   // Parse command to extract special syntax (pause, wait/sleep commands)
@@ -125,6 +366,7 @@ document.addEventListener("DOMContentLoaded", function () {
     chrome.storage.local.get(["prompts"], function (localResult) {
       const prompts = localResult.prompts || [];
       displayPrompts(prompts);
+      initializeAccount();
     });
   });
 
@@ -428,88 +670,93 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const currentSeparator =
           separatorInput.value || defaultSettings.separator;
-        chrome.tabs.query(
-          { active: true, currentWindow: true },
-          function (tabs) {
-            if (tabs[0] && tabs[0].id) {
-              // Check if we're on a ChatGPT page
-              if (!tabs[0].url || !tabs[0].url.includes("chatgpt.com")) {
-                showStatus(
-                  "Please navigate to ChatGPT (https://chatgpt.com) to use this extension.",
-                  true
-                );
-                return;
-              }
 
-              // Ensure content script is loaded before sending message
-              ensureContentScript(tabs[0].id, (isLoaded) => {
-                if (!isLoaded) {
+        const runChain = () => {
+          chrome.tabs.query(
+            { active: true, currentWindow: true },
+            function (tabs) {
+              if (tabs[0] && tabs[0].id) {
+                // Check if we're on a ChatGPT page
+                if (!tabs[0].url || !tabs[0].url.includes("chatgpt.com")) {
                   showStatus(
-                    "Failed to load extension on this page. Please refresh and try again.",
+                    "Please navigate to ChatGPT (https://chatgpt.com) to use this extension.",
                     true
                   );
                   return;
                 }
 
-                chrome.tabs.sendMessage(
-                  tabs[0].id,
-                  {
-                    action: "usePrompt",
-                    prompt,
-                    separator: currentSeparator,
-                    startPosition: startPosition,
-                  },
-                  (response) => {
-                    if (chrome.runtime.lastError) {
-                      console.error(
-                        "Error sending message to content script:",
-                        chrome.runtime.lastError.message
-                      );
+                // Ensure content script is loaded before sending message
+                ensureContentScript(tabs[0].id, (isLoaded) => {
+                  if (!isLoaded) {
+                    showStatus(
+                      "Failed to load extension on this page. Please refresh and try again.",
+                      true
+                    );
+                    return;
+                  }
 
-                      // Provide more helpful error messages
-                      let errorMessage = "Failed to start chain. ";
-                      if (
-                        chrome.runtime.lastError.message.includes(
-                          "Receiving end does not exist"
-                        )
-                      ) {
-                        errorMessage +=
-                          "Please refresh the ChatGPT page and try again.";
-                      } else {
-                        errorMessage += chrome.runtime.lastError.message;
-                      }
-
-                      showStatus(errorMessage, true);
-                    } else if (response) {
-                      if (response.status === "started") {
-                        const startInfo =
-                          startPosition > 0
-                            ? ` (starting from step ${startPosition + 1})`
-                            : "";
-                        showStatus(
-                          `Chain started: ${response.message}${startInfo}`
+                  chrome.tabs.sendMessage(
+                    tabs[0].id,
+                    {
+                      action: "usePrompt",
+                      prompt,
+                      separator: currentSeparator,
+                      startPosition: startPosition,
+                    },
+                    (response) => {
+                      if (chrome.runtime.lastError) {
+                        console.error(
+                          "Error sending message to content script:",
+                          chrome.runtime.lastError.message
                         );
-                        window.close(); // Close popup after successfully starting
+
+                        // Provide more helpful error messages
+                        let errorMessage = "Failed to start chain. ";
+                        if (
+                          chrome.runtime.lastError.message.includes(
+                            "Receiving end does not exist"
+                          )
+                        ) {
+                          errorMessage +=
+                            "Please refresh the ChatGPT page and try again.";
+                        } else {
+                          errorMessage += chrome.runtime.lastError.message;
+                        }
+
+                        showStatus(errorMessage, true);
+                      } else if (response) {
+                        if (response.status === "started") {
+                          const startInfo =
+                            startPosition > 0
+                              ? ` (starting from step ${startPosition + 1})`
+                              : "";
+                          showStatus(
+                            `Chain started: ${response.message}${startInfo}`
+                          );
+                          window.close(); // Close popup after successfully starting
+                        } else {
+                          showStatus(
+                            `Could not start chain: ${response.message}`,
+                            true
+                          );
+                        }
                       } else {
                         showStatus(
-                          `Could not start chain: ${response.message}`,
+                          "No response from ChatGPT page. Please refresh the page and try again.",
                           true
                         );
                       }
-                    } else {
-                      showStatus(
-                        "No response from ChatGPT page. Please refresh the page and try again.",
-                        true
-                      );
                     }
-                  }
-                );
-              });
-            } else {
-              showStatus("Could not find active tab to send prompt.", true);
+                  );
+                });
+              } else {
+                showStatus("Could not find active tab to send prompt.", true);
+              }
             }
-          }
-        );
+          );
+        };
+
+        checkAndIncrementUsage(runChain);
       });
     });
     document.querySelectorAll(".delete-prompt").forEach((button) => {

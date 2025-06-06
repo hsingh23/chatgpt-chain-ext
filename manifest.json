@@ -41,7 +41,8 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://gemini.google.com/*",
-    "https://claude.ai/*"
+    "https://claude.ai/*",
+    "https://*/*"
   ],
   "web_accessible_resources": [
     {
@@ -57,7 +58,7 @@
   ],
   "minimum_chrome_version": "114",
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' https://www.gstatic.com; object-src 'self'"
   },
   "update_url": "https://clients2.google.com/service/update2/crx"
 }

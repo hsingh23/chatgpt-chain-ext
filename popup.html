@@ -200,6 +200,24 @@
   <body>
     <h2>ChatGPT Chain Prompts</h2>
     <div id="last-run-info" style="font-size:12px; margin-bottom:10px; color:#333;"></div>
+    <div id="usage-info" style="font-size:12px; margin-bottom:10px; color:#333;"></div>
+
+    <div id="account-section" class="section" style="display:none;">
+      <h3>Account</h3>
+      <div id="login-area">
+        <input type="email" id="user-email" placeholder="Email" style="width:100%; margin-bottom:8px;" />
+        <input type="password" id="user-password" placeholder="Password" style="width:100%; margin-bottom:8px;" />
+        <button id="login-btn">Login</button>
+      </div>
+      <div id="logged-in-area" style="display:none;">
+        <div id="account-email" style="margin-bottom:8px;"></div>
+        <button id="logout-btn" class="secondary">Logout</button>
+        <button id="restore-btn" class="secondary" style="margin-left:8px;">Restore Access</button>
+        <div id="payment-info" style="margin-top:8px;"></div>
+        <button id="stripe-btn" style="display:none; margin-top:8px;">Upgrade</button>
+      </div>
+      <div id="limits-info" style="margin-top:8px; font-size:12px; color:#333;"></div>
+    </div>
 
     <div class="section">
       <h3>Saved Prompt Chains</h3>
@@ -302,6 +320,8 @@ Example: Create outline~$wait 10s$~Write intro~$pause$~Continue writing"
 
     <div id="status-message" style="display: none"></div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
