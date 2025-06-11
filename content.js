@@ -1651,3 +1651,135 @@ async function togglePiP() {
   savePipWindowState();
   return "PIP opened";
 }
+
+// --- Quick Queue Buttons ---
+
+function startQueueFromPrompt(promptText) {
+  if (isChainRunning || !promptText) {
+    console.warn("Cannot start new queue while another is running or prompt is empty.");
+    return;
+  }
+
+  if (config.enableFloatingProgress) createControlPanel();
+  else destroyControlPanel();
+  if (config.enableSleepIndicator) createSleepIndicator();
+  else destroySleepIndicator();
+
+  currentChain = [promptText];
+  isChainRunning = true;
+  isPaused = false;
+  currentCommandIndex = 0;
+  totalCommandsInSequence = currentChain.length;
+  imageCommandCounter = 0;
+  currentChatId = getCurrentChatId();
+  if (currentChatId) {
+    saveChatState();
+  }
+  if (pauseResumeButton) pauseResumeButton.disabled = false;
+  if (stopButton) stopButton.disabled = false;
+  updateControlPanel();
+  processNextCommand();
+}
+
+function appendPromptToQueue(promptText) {
+  if (!promptText) return;
+  if (!isChainRunning) {
+    startQueueFromPrompt(promptText);
+    return;
+  }
+  currentChain.push(promptText);
+  totalCommandsInSequence = currentChain.length;
+  saveChatState();
+  updateControlPanel();
+}
+
+function insertPromptNext(promptText) {
+  if (!promptText) return;
+  if (!isChainRunning) {
+    startQueueFromPrompt(promptText);
+    return;
+  }
+  const insertIndex = currentCommandIndex + 1;
+  currentChain.splice(insertIndex, 0, promptText);
+  totalCommandsInSequence = currentChain.length;
+  saveChatState();
+  updateControlPanel();
+}
+
+function addComposerButtons(actionsDiv) {
+  if (!actionsDiv || actionsDiv.querySelector("#ext-start-queue")) return;
+
+  const btnStyle =
+    "background:none;border:none;cursor:pointer;font-size:16px;margin-right:4px;";
+
+  const startBtn = document.createElement("button");
+  startBtn.id = "ext-start-queue";
+  startBtn.textContent = "▶️";
+  startBtn.title = "Start new queue";
+  startBtn.style.cssText = btnStyle;
+  startBtn.onclick = () => {
+    const textarea = document.querySelector(siteAdapter.textareaSelector);
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (text) {
+      startQueueFromPrompt(text);
+      textarea.value = "";
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  const appendBtn = document.createElement("button");
+  appendBtn.id = "ext-append-queue";
+  appendBtn.textContent = "➕";
+  appendBtn.title = "Append to queue";
+  appendBtn.style.cssText = btnStyle;
+  appendBtn.onclick = () => {
+    const textarea = document.querySelector(siteAdapter.textareaSelector);
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (text) {
+      appendPromptToQueue(text);
+      textarea.value = "";
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  const nextBtn = document.createElement("button");
+  nextBtn.id = "ext-insert-next";
+  nextBtn.textContent = "⏭️";
+  nextBtn.title = "Insert to play next";
+  nextBtn.style.cssText = btnStyle;
+  nextBtn.onclick = () => {
+    const textarea = document.querySelector(siteAdapter.textareaSelector);
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    if (text) {
+      insertPromptNext(text);
+      textarea.value = "";
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  actionsDiv.prepend(nextBtn);
+  actionsDiv.prepend(appendBtn);
+  actionsDiv.prepend(startBtn);
+}
+
+function initComposerButtons() {
+  const observer = new MutationObserver(() => {
+    const actionsDiv = document.querySelector(
+      'div[data-testid="composer-trailing-actions"]'
+    );
+    if (actionsDiv) {
+      addComposerButtons(actionsDiv);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  // In case the element already exists
+  const actionsDiv = document.querySelector(
+    'div[data-testid="composer-trailing-actions"]'
+  );
+  if (actionsDiv) addComposerButtons(actionsDiv);
+}
+
+initComposerButtons();
